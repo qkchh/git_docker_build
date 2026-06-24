@@ -10,7 +10,7 @@ def _get_or_clone(repo) -> Path:
     repo_dir = WORKSPACE_DIR / str(repo.id)
     if repo_dir.exists():
         r = git.Repo(repo_dir)
-        r.remotes.origin.fetch("--tags", "--prune")
+        r.git.fetch("origin", "--tags", "--prune")
     else:
         repo_dir.mkdir(parents=True, exist_ok=True)
         git.Repo.clone_from(repo.git_url, repo_dir)
