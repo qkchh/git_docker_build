@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Git Docker Build</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .log-box { font-family: 'Menlo', 'Monaco', monospace; font-size: 12px; }
+    .status-running  { color: #f59e0b; }
+    .status-success  { color: #10b981; }
+    .status-failed   { color: #ef4444; }
+    .status-pending  { color: #6b7280; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen" x-data="app()" x-init="init()">
+
+  <!-- Header -->
+  <header class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-4">
+    <span class="text-lg font-bold tracking-tight">⚙ Git Docker Build</span>
+    <nav class="flex gap-1 ml-4">
+      <template x-for="tab in tabs" :key="tab.id">
+        <button
+          @click="currentTab = tab.id"
+          :class="currentTab === tab.id
+            ? 'bg-blue-600 text-white'
+            : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+          class="px-4 py-1.5 rounded text-sm font-medium transition-colors"
+          x-text="t('tab_' + tab.id)">
+        </button>
+      </template>
+    </nav>
+    <!-- Language Toggle -->
+    <button @click="toggleLang()"
+      class="ml-auto text-xs px-3 py-1.5 rounded border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+      x-text="lang === 'zh' ? 'EN' : '中文'">
+    </button>
+  </header>
+
+  <main class="p-6 max-w-6xl mx-auto">
+
+    <!-- ======================== REPOS TAB ======================== -->
+    <div x-show="currentTab === 'repos'" x-cloak>
+
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold" x-text="t('heading_repos')"></h2>
+        <button @click="showAddRepo = !showAddRepo"
+          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition-colors"
+          x-text="t('btn_add_repo')">
+        </button>
+      </div>
+
+      <!-- Add Repo Form -->
+      <div x-show="showAddRepo" x-cloak class="bg-gray-900 border border-gray-800 rounded-lg p-5 mb-5">
+        <h3 class="font-medium mb-4 text-gray-300" x-text="t('form_new_repo')"></h3>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1" x-text="t('label_name')"></label>
+            <input x-model="newRepo.name" type="text" :placeholder="t('placeholder_name')"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1" x-text="t('label_source_type')"></label>
+            <select x-model="newRepo.source_type"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+              <option value="remote" x-text="t('opt_remote')"></option>
+              <option value="local" x-text="t('opt_local')"></option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-4">
+          <template x-if="newRepo.source_type === 'remote'">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1" x-text="t('label_github_url')"></label>
+              <input x-model="newRepo.git_url" type="text" placeholder="https://github.com/user/repo.git"
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+          </template>
+          <template x-if="newRepo.source_type === 'local'">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1" x-text="t('label_local_path')"></label>
+              <input x-model="newRepo.local_path" type="text" :placeholder="t('placeholder_local_path')"
+                class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+            </div>
+          </template>
+        </div>
+        <div class="flex gap-2">
+          <button @click="createRepo()"
+            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium transition-colors"
+            x-text="t('btn_save')">
+          </button>
+          <button @click="showAddRepo = false; resetNewRepo()"
+            class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-sm font-medium transition-colors"
+            x-text="t('btn_cancel')">
+          </button>
+        </div>
+        <p x-show="formError" x-text="formError" class="text-red-400 text-sm mt-2"></p>
+      </div>
+
+      <!-- Repo List -->
+      <div class="space-y-2">
+        <template x-if="repos.length === 0">
+          <p class="text-gray-500 text-sm py-8 text-center" x-text="t('no_repos')"></p>
+        </template>
+        <template x-for="repo in repos" :key="repo.id">
+          <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 flex items-center justify-between hover:border-gray-600 transition-colors">
+            <div class="flex items-center gap-3">
+              <span class="text-lg" x-text="repo.source_type === 'remote' ? '☁️' : '💻'"></span>
+              <div>
+                <div class="font-medium" x-text="repo.name"></div>
+                <div class="text-xs text-gray-500" x-text="repo.git_url || repo.local_path"></div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button @click="openRepo(repo)"
+                class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded text-sm transition-colors"
+                x-text="t('btn_browse_commits')">
+              </button>
+              <button @click="openEnvPanel(repo)"
+                :class="selectedEnvRepo?.id === repo.id ? 'bg-indigo-700 text-white' : 'bg-gray-700 hover:bg-gray-600'"
+                class="px-3 py-1.5 rounded text-sm transition-colors"
+                x-text="t('btn_env_vars')">
+              </button>
+              <button @click="deleteRepo(repo.id)"
+                class="text-red-400 hover:text-red-300 hover:bg-red-900/20 px-3 py-1.5 rounded text-sm transition-colors"
+                x-text="t('btn_delete')">
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ======================== COMMITS PANEL ======================== -->
+    <div x-show="currentTab === 'repos' && selectedRepo" x-cloak class="mt-6">
+      <div class="bg-gray-900 border border-gray-800 rounded-lg">
+        <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h3 class="font-medium">
+            <span x-text="t('heading_commits')"></span> —
+            <span class="text-blue-400" x-text="selectedRepo?.name"></span>
+          </h3>
+          <div class="flex items-center gap-3">
+            <button @click="loadCommits(selectedRepo)" class="text-xs text-gray-400 hover:text-white"
+              x-text="'↻ ' + t('btn_refresh')"></button>
+            <button @click="selectedRepo = null; commits = []" class="text-gray-500 hover:text-white">✕</button>
+          </div>
+        </div>
+
+        <div x-show="loadingCommits" class="py-8 text-center text-gray-500 text-sm" x-text="t('loading_commits')"></div>
+
+        <div x-show="!loadingCommits" class="divide-y divide-gray-800 max-h-96 overflow-y-auto">
+          <template x-if="commits.length === 0">
+            <p class="text-gray-500 text-sm py-6 text-center" x-text="t('no_commits')"></p>
+          </template>
+          <template x-for="commit in commits" :key="commit.sha">
+            <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors">
+              <div class="flex items-center gap-3 min-w-0">
+                <code class="text-xs bg-gray-800 px-2 py-0.5 rounded text-yellow-400 shrink-0" x-text="commit.short_sha"></code>
+                <span class="text-sm truncate" x-text="commit.message"></span>
+              </div>
+              <div class="flex items-center gap-4 shrink-0 ml-4">
+                <span class="text-xs text-gray-500" x-text="commit.author"></span>
+                <span class="text-xs text-gray-600" x-text="formatDate(commit.date)"></span>
+                <button @click="triggerBuild(selectedRepo, commit)"
+                  class="bg-green-700 hover:bg-green-600 px-3 py-1 rounded text-xs font-medium transition-colors"
+                  x-text="t('btn_build')">
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== ENV VARS PANEL ======================== -->
+    <div x-show="currentTab === 'repos' && selectedEnvRepo" x-cloak class="mt-4">
+      <div class="bg-gray-900 border border-indigo-900/60 rounded-lg">
+        <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h3 class="font-medium">
+            <span x-text="t('heading_env_vars')"></span> —
+            <span class="text-indigo-400" x-text="selectedEnvRepo?.name"></span>
+          </h3>
+          <div class="flex items-center gap-2">
+            <button @click="showPasteArea = !showPasteArea; pasteContent = ''"
+              :class="showPasteArea ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'"
+              class="text-xs px-3 py-1.5 rounded transition-colors"
+              x-text="t('btn_paste_env')">
+            </button>
+            <button @click="exportEnvFile()" x-show="envVars.length > 0"
+              class="text-xs px-3 py-1.5 rounded bg-gray-800 text-gray-400 hover:text-white transition-colors"
+              x-text="t('btn_export_env')">
+            </button>
+            <button @click="selectedEnvRepo = null; envVars = []; showPasteArea = false"
+              class="text-gray-500 hover:text-white ml-1">✕</button>
+          </div>
+        </div>
+
+        <!-- Paste import area -->
+        <div x-show="showPasteArea" x-cloak class="px-5 py-3 border-b border-gray-800">
+          <textarea x-model="pasteContent" rows="5" :placeholder="t('paste_placeholder')"
+            class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500 resize-y">
+          </textarea>
+          <div class="flex items-center gap-2 mt-2">
+            <button @click="bulkImportEnv()"
+              class="bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded text-sm font-medium transition-colors"
+              x-text="t('btn_import')">
+            </button>
+            <span x-show="importMsg" x-text="importMsg" class="text-green-400 text-xs"></span>
+          </div>
+        </div>
+
+        <p class="px-5 pt-3 text-xs text-gray-500" x-text="t('env_hint')"></p>
+
+        <!-- Add form -->
+        <div class="px-5 py-3 flex gap-2 items-end">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-400 mb-1" x-text="t('label_key')"></label>
+            <input x-model="newEnvKey" type="text" :placeholder="t('placeholder_key')" @keydown.enter="addEnvVar()"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div class="flex-1">
+            <label class="block text-xs text-gray-400 mb-1" x-text="t('label_value')"></label>
+            <input x-model="newEnvVal" type="text" :placeholder="t('placeholder_value')" @keydown.enter="addEnvVar()"
+              class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-500" />
+          </div>
+          <button @click="addEnvVar()"
+            class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-sm font-medium transition-colors shrink-0"
+            x-text="t('btn_add')">
+          </button>
+        </div>
+
+        <!-- Env list -->
+        <div class="divide-y divide-gray-800 max-h-64 overflow-y-auto">
+          <template x-if="envVars.length === 0">
+            <p class="text-gray-500 text-sm py-5 text-center" x-text="t('no_env_vars')"></p>
+          </template>
+          <template x-for="env in envVars" :key="env.id">
+            <div class="px-5 py-2.5 flex items-center justify-between hover:bg-gray-800/40 transition-colors">
+              <div class="flex items-center gap-3 font-mono text-sm min-w-0">
+                <span class="text-indigo-300 shrink-0" x-text="env.key"></span>
+                <span class="text-gray-600">=</span>
+                <span class="text-gray-400 truncate" x-text="env.value"></span>
+              </div>
+              <button @click="deleteEnvVar(env)"
+                class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded transition-colors shrink-0 ml-3"
+                x-text="t('btn_delete')">
+              </button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================== BUILDS TAB ======================== -->
+    <div x-show="currentTab === 'builds'" x-cloak>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold" x-text="t('heading_builds')"></h2>
+        <button @click="loadBuilds()" class="text-sm text-gray-400 hover:text-white"
+          x-text="'↻ ' + t('btn_refresh')"></button>
+      </div>
+
+      <!-- Active Build Log -->
+      <div x-show="activeBuild" x-cloak class="bg-gray-900 border border-gray-700 rounded-lg mb-5">
+        <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-medium" x-text="t('label_build')"></span>
+            <code class="text-xs bg-gray-800 px-2 py-0.5 rounded text-yellow-400" x-text="activeBuild?.image_name"></code>
+            <span :class="`status-${activeBuild?.status}`" class="text-xs font-medium"
+              x-text="t('status_' + (activeBuild?.status || 'pending'))"></span>
+          </div>
+          <button @click="activeBuild = null; buildLog = []" class="text-gray-500 hover:text-white text-sm">✕</button>
+        </div>
+        <div class="log-box bg-black/40 p-4 h-72 overflow-y-auto" x-ref="logBox">
+          <template x-for="(line, i) in buildLog" :key="i">
+            <div :class="line.startsWith('[ERROR]') ? 'text-red-400' : line.startsWith('[INFO]') ? 'text-blue-400' : line.startsWith('[DONE]') ? 'text-green-400' : 'text-gray-300'"
+              x-text="line"></div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Build List -->
+      <div class="space-y-2">
+        <template x-if="builds.length === 0">
+          <p class="text-gray-500 text-sm py-8 text-center" x-text="t('no_builds')"></p>
+        </template>
+        <template x-for="build in builds" :key="build.id">
+          <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <span :class="`status-${build.status}`" class="text-sm font-medium w-16"
+                x-text="t('status_' + build.status)"></span>
+              <code class="text-xs bg-gray-800 px-2 py-0.5 rounded text-yellow-400" x-text="build.image_name"></code>
+              <span class="text-sm text-gray-400 truncate max-w-xs"
+                x-text="build.commit_message || build.commit_sha.slice(0,8)"></span>
+            </div>
+            <div class="flex items-center gap-4">
+              <span class="text-xs text-gray-600" x-text="formatDate(build.created_at)"></span>
+              <button x-show="build.log" @click="showBuildLog(build)"
+                class="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded transition-colors"
+                x-text="t('btn_logs')">
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ======================== IMAGES TAB ======================== -->
+    <div x-show="currentTab === 'images'" x-cloak>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold" x-text="t('heading_images')"></h2>
+        <button @click="loadImages()" class="text-sm text-gray-400 hover:text-white"
+          x-text="'↻ ' + t('btn_refresh')"></button>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase">
+              <th class="text-left px-4 py-3" x-text="t('col_tags')"></th>
+              <th class="text-left px-4 py-3">ID</th>
+              <th class="text-left px-4 py-3" x-text="t('col_size')"></th>
+              <th class="text-left px-4 py-3" x-text="t('col_created')"></th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <template x-if="images.length === 0">
+              <tr><td colspan="5" class="text-center text-gray-500 py-8" x-text="t('no_images')"></td></tr>
+            </template>
+            <template x-for="img in images" :key="img.id">
+              <tr class="hover:bg-gray-800/40 transition-colors">
+                <td class="px-4 py-3">
+                  <div class="flex flex-wrap gap-1">
+                    <template x-for="tag in img.tags" :key="tag">
+                      <span class="bg-blue-900/50 text-blue-300 text-xs px-2 py-0.5 rounded" x-text="tag"></span>
+                    </template>
+                  </div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs text-gray-400" x-text="img.id"></td>
+                <td class="px-4 py-3 text-gray-400" x-text="`${img.size_mb} MB`"></td>
+                <td class="px-4 py-3 text-gray-500 text-xs" x-text="formatDate(img.created)"></td>
+                <td class="px-4 py-3 text-right">
+                  <button @click="deleteImage(img.id)"
+                    class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                    x-text="t('btn_remove')">
+                  </button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======================== CONTAINERS TAB ======================== -->
+    <div x-show="currentTab === 'containers'" x-cloak>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold" x-text="t('heading_containers')"></h2>
+        <button @click="loadContainers()" class="text-sm text-gray-400 hover:text-white"
+          x-text="'↻ ' + t('btn_refresh')"></button>
+      </div>
+      <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase">
+              <th class="text-left px-4 py-3" x-text="t('col_name')"></th>
+              <th class="text-left px-4 py-3" x-text="t('col_image')"></th>
+              <th class="text-left px-4 py-3" x-text="t('col_status')"></th>
+              <th class="text-left px-4 py-3">ID</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800">
+            <template x-if="containers.length === 0">
+              <tr><td colspan="5" class="text-center text-gray-500 py-8" x-text="t('no_containers')"></td></tr>
+            </template>
+            <template x-for="c in containers" :key="c.id">
+              <tr class="hover:bg-gray-800/40 transition-colors">
+                <td class="px-4 py-3 font-medium" x-text="c.name"></td>
+                <td class="px-4 py-3 text-gray-400 text-xs font-mono" x-text="c.image"></td>
+                <td class="px-4 py-3">
+                  <span :class="c.status === 'running' ? 'text-green-400' : 'text-gray-500'"
+                    class="text-xs font-medium" x-text="c.status"></span>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs text-gray-500" x-text="c.id"></td>
+                <td class="px-4 py-3">
+                  <div class="flex justify-end gap-1">
+                    <button x-show="c.status !== 'running'" @click="containerAction(c.id, 'start')"
+                      class="text-xs bg-green-800/50 hover:bg-green-700/50 text-green-400 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_start')">
+                    </button>
+                    <button x-show="c.status === 'running'" @click="containerAction(c.id, 'stop')"
+                      class="text-xs bg-yellow-800/50 hover:bg-yellow-700/50 text-yellow-400 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_stop')">
+                    </button>
+                    <button x-show="c.status === 'running'" @click="containerAction(c.id, 'restart')"
+                      class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_restart')">
+                    </button>
+                    <button @click="containerAction(c.id, 'remove')"
+                      class="text-xs text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_remove')">
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Log Modal -->
+  <div x-show="logModal" x-cloak
+    class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+    @click.self="logModal = null">
+    <div class="bg-gray-900 border border-gray-700 rounded-lg w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between shrink-0">
+        <span class="font-medium text-sm" x-text="logModal?.image_name"></span>
+        <button @click="logModal = null" class="text-gray-500 hover:text-white">✕</button>
+      </div>
+      <div class="log-box bg-black/40 p-4 overflow-y-auto flex-1 whitespace-pre-wrap text-gray-300"
+        x-text="logModal?.log || t('no_log')"></div>
+    </div>
+  </div>
+
+</body>
+</html>

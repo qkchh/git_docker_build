@@ -1,0 +1,21 @@
+# IDE
+.idea/
+.vscode/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# 数据库 — 含有 env vars 等敏感信息，禁止提交
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# 远端仓库克隆目录 — 体积大，无需提交
+workspace/
+
+# 运行时生成的 .env 文件
+.env

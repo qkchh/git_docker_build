@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3002:3002"
+    environment:
+      # Store database in the mounted data/ directory
+      - DATABASE_URL=sqlite:////app/data/gitdockerbuild.db
+    volumes:
+      # Docker socket — required for building images on the host
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist SQLite database (contains repos & build history)
+      - ./data:/app/data
+      # Persist cloned remote repos
+      - ./workspace:/app/workspace
+    restart: unless-stopped
