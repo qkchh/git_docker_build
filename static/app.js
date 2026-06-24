@@ -174,6 +174,63 @@ function app() {
     toggleLang() { this.lang = this.lang === 'zh' ? 'en' : 'zh' },
 
     // ================================================================
+    // Auth
+    // ================================================================
+    isAuthenticated: false,
+    token: '',
+    tokenInput: '',
+    authError: '',
+
+    _loadAuth() {
+      try {
+        const raw = localStorage.getItem('gdb_auth')
+        if (!raw) return
+        const { token, expiry } = JSON.parse(raw)
+        if (Date.now() < expiry) {
+          this.token = token
+          this.isAuthenticated = true
+        } else {
+          localStorage.removeItem('gdb_auth')
+        }
+      } catch { localStorage.removeItem('gdb_auth') }
+    },
+
+    async submitToken() {
+      this.authError = ''
+      const t = this.tokenInput.trim()
+      if (!t) return
+      const r = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: t }),
+      })
+      if (r.ok) {
+        this.token = t
+        this.tokenInput = ''
+        this.isAuthenticated = true
+        const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000  // 30 days
+        localStorage.setItem('gdb_auth', JSON.stringify({ token: t, expiry }))
+        await this.loadRepos()
+      } else {
+        this.authError = this.lang === 'zh' ? 'Token 无效' : 'Invalid token'
+      }
+    },
+
+    logout() {
+      localStorage.removeItem('gdb_auth')
+      this.token = ''
+      this.isAuthenticated = false
+    },
+
+    // Unified fetch with auth header; auto-logout on 401
+    async apiFetch(url, options = {}) {
+      options.headers = { ...options.headers, 'X-Access-Token': this.token }
+      const r = await fetch(url, options)
+      if (r.status === 401) { this.logout(); return r }
+      return r
+    },
+
+    // ================================================================
     // State
     // ================================================================
     tabs: [
@@ -220,7 +277,10 @@ function app() {
     // Init
     // ================================================================
     async init() {
-      await this.loadRepos()
+      this._loadAuth()
+      if (this.isAuthenticated) {
+        await this.loadRepos()
+      }
       this.$watch('currentTab', (tab) => {
         if (tab === 'builds')     this.loadBuilds()
         if (tab === 'images')     this.loadImages()
@@ -232,8 +292,8 @@ function app() {
     // Repos
     // ================================================================
     async loadRepos() {
-      const r = await fetch('/api/repos')
-      this.repos = await r.json()
+      const r = await this.apiFetch('/api/repos')
+      if (r.ok) this.repos = await r.json()
     },
 
     resetNewRepo() {
@@ -247,7 +307,7 @@ function app() {
       if (payload.source_type === 'remote') delete payload.local_path
       else delete payload.git_url
 
-      const r = await fetch('/api/repos', {
+      const r = await this.apiFetch('/api/repos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -264,7 +324,7 @@ function app() {
 
     async deleteRepo(id) {
       if (!confirm(this.t('confirm_delete_repo'))) return
-      await fetch(`/api/repos/${id}`, { method: 'DELETE' })
+      await this.apiFetch(`/api/repos/${id}`, { method: 'DELETE' })
       if (this.selectedRepo?.id === id) { this.selectedRepo = null; this.commits = [] }
       await this.loadRepos()
     },
@@ -281,7 +341,7 @@ function app() {
       this.loadingCommits = true
       this.commits = []
       try {
-        const r = await fetch(`/api/repos/${repo.id}/commits`)
+        const r = await this.apiFetch(`/api/repos/${repo.id}/commits`)
         if (r.ok) this.commits = await r.json()
         else { const err = await r.json(); alert(err.detail || this.t('err_load_commits')) }
       } finally {
@@ -301,14 +361,14 @@ function app() {
     },
 
     async loadEnvVars(repo) {
-      const r = await fetch(`/api/repos/${repo.id}/envs`)
-      this.envVars = await r.json()
+      const r = await this.apiFetch(`/api/repos/${repo.id}/envs`)
+      if (r.ok) this.envVars = await r.json()
     },
 
     async addEnvVar() {
       const key = this.newEnvKey.trim()
       if (!key) return
-      const r = await fetch(`/api/repos/${this.selectedEnvRepo.id}/envs`, {
+      const r = await this.apiFetch(`/api/repos/${this.selectedEnvRepo.id}/envs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value: this.newEnvVal }),
@@ -319,14 +379,14 @@ function app() {
     },
 
     async deleteEnvVar(env) {
-      await fetch(`/api/repos/${this.selectedEnvRepo.id}/envs/${env.id}`, { method: 'DELETE' })
+      await this.apiFetch(`/api/repos/${this.selectedEnvRepo.id}/envs/${env.id}`, { method: 'DELETE' })
       await this.loadEnvVars(this.selectedEnvRepo)
     },
 
     async bulkImportEnv() {
       const content = this.pasteContent.trim()
       if (!content) return
-      const r = await fetch(`/api/repos/${this.selectedEnvRepo.id}/envs/bulk`, {
+      const r = await this.apiFetch(`/api/repos/${this.selectedEnvRepo.id}/envs/bulk`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
@@ -354,7 +414,7 @@ function app() {
     // Builds
     // ================================================================
     async triggerBuild(repo, commit) {
-      const r = await fetch('/api/builds', {
+      const r = await this.apiFetch('/api/builds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repo_id: repo.id, commit_sha: commit.sha, commit_message: commit.message }),
@@ -369,7 +429,8 @@ function app() {
     },
 
     async streamBuild(build) {
-      const es = new EventSource(`/api/builds/${build.id}/stream`)
+      // EventSource doesn't support custom headers — pass token as query param
+      const es = new EventSource(`/api/builds/${build.id}/stream?token=${encodeURIComponent(this.token)}`)
       es.onmessage = (e) => {
         const line = JSON.parse(e.data)
         this.buildLog.push(line)
@@ -387,8 +448,8 @@ function app() {
     },
 
     async loadBuilds() {
-      const r = await fetch('/api/builds')
-      this.builds = await r.json()
+      const r = await this.apiFetch('/api/builds')
+      if (r.ok) this.builds = await r.json()
     },
 
     showBuildLog(build) { this.logModal = build },
@@ -397,13 +458,13 @@ function app() {
     // Images
     // ================================================================
     async loadImages() {
-      const r = await fetch('/api/images')
-      this.images = await r.json()
+      const r = await this.apiFetch('/api/images')
+      if (r.ok) this.images = await r.json()
     },
 
     async deleteImage(id) {
       if (!confirm(this.t('confirm_remove_image'))) return
-      const r = await fetch(`/api/images/${id}`, { method: 'DELETE' })
+      const r = await this.apiFetch(`/api/images/${id}`, { method: 'DELETE' })
       if (!r.ok) { const e = await r.json(); alert(e.detail); return }
       await this.loadImages()
     },
@@ -412,13 +473,13 @@ function app() {
     // Containers
     // ================================================================
     async loadContainers() {
-      const r = await fetch('/api/containers')
-      this.containers = await r.json()
+      const r = await this.apiFetch('/api/containers')
+      if (r.ok) this.containers = await r.json()
     },
 
     async containerAction(id, action) {
       if (action === 'remove' && !confirm(this.t('confirm_remove_container'))) return
-      const r = await fetch(`/api/containers/${id}/action`, {
+      const r = await this.apiFetch(`/api/containers/${id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),

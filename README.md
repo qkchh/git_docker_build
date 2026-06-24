@@ -11,6 +11,7 @@
 - **环境变量管理** — 每个仓库独立维护 ENV，支持粘贴导入 / 下载导出 `.env` 文件，构建时自动注入
 - **镜像管理** — 查看、删除本地 Docker 镜像
 - **容器管理** — 启动、停止、重启、删除容器
+- **访问认证** — 启动时生成固定 Token，浏览器首次访问需输入，记住 30 天
 - **中英文切换** — 界面支持中文（默认）和 English
 
 ## 技术栈
@@ -27,11 +28,10 @@
 
 ```
 git_docker_build/
-├── main.py                  # FastAPI 入口
+├── main.py                  # FastAPI 入口 & 认证中间件
 ├── database.py              # SQLite 连接 & 数据库迁移
 ├── models.py                # Repository / RepoEnv / Build 数据模型
 ├── requirements.txt
-├── Dockerfile               # 本项目的 Docker 镜像
 ├── routers/
 │   ├── repos.py             # 仓库 CRUD + commits + env vars
 │   ├── builds.py            # 构建触发 + SSE 日志流
@@ -46,8 +46,6 @@ git_docker_build/
 ```
 
 ## 快速开始
-
-### 方式一：本地直接运行
 
 **环境要求**
 - Python 3.12+
@@ -65,36 +63,26 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # 启动服务
-uvicorn main:app --reload --port 3002
+uvicorn main:app --port 3002
 ```
 
 浏览器打开 [http://localhost:3002](http://localhost:3002)
 
 ---
 
-### 方式二：Docker 运行
+## 访问认证
 
-> 本服务需要访问宿主机的 Docker，必须挂载 Docker Socket。
+启动时，终端会打印访问 Token：
 
-```bash
-# 构建镜像
-docker build -t git-docker-build .
-
-# 运行容器
-docker run -d \
-  --name git-docker-build \
-  -p 3002:3002 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/workspace:/app/workspace \
-  git-docker-build
+```
+====================================================
+  Access Token: 4a7f2c9e1b3d5f8a0e6c2b4d7f1a3e5c
+====================================================
 ```
 
-或使用 docker-compose：
-
-```bash
-docker compose up -d
-```
+- 首次访问时在登录页输入该 Token，浏览器记住 **30 天**
+- Token 首次生成后保存在 `data/access_token.txt`，重启服务不会变化
+- 如需自定义 Token，设置环境变量 `ACCESS_TOKEN=your_token` 后重启
 
 ---
 
@@ -114,19 +102,6 @@ docker compose up -d
 - 同时作为 `--build-arg` 传入（供 Dockerfile `ARG` 使用）
 
 ---
-
-## 镜像加速（中国大陆）
-
-Docker Hub 访问较慢时，在 Docker Desktop → Settings → Docker Engine 中添加：
-
-```json
-{
-  "registry-mirrors": [
-    "https://docker.mirrors.ustc.edu.cn",
-    "https://hub-mirror.c.163.com"
-  ]
-}
-```
 
 ## License
 

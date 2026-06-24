@@ -18,8 +18,31 @@
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen" x-data="app()" x-init="init()">
 
+  <!-- ======================== LOGIN SCREEN ======================== -->
+  <div x-show="!isAuthenticated" x-cloak
+    class="fixed inset-0 bg-gray-950 flex items-center justify-center z-50">
+    <div class="bg-gray-900 border border-gray-700 rounded-xl p-8 w-full max-w-sm shadow-2xl">
+      <div class="text-center mb-6">
+        <div class="text-3xl mb-2">⚙</div>
+        <h1 class="text-lg font-bold">Git Docker Build</h1>
+        <p class="text-gray-500 text-sm mt-1" x-text="lang === 'zh' ? '请输入访问 Token' : 'Enter access token'"></p>
+      </div>
+      <input
+        x-model="tokenInput"
+        type="password"
+        :placeholder="lang === 'zh' ? 'Token' : 'Token'"
+        @keydown.enter="submitToken()"
+        class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500 mb-3" />
+      <p x-show="authError" x-text="authError" class="text-red-400 text-sm mb-3"></p>
+      <button @click="submitToken()"
+        class="w-full bg-blue-600 hover:bg-blue-700 py-2.5 rounded font-medium text-sm transition-colors"
+        x-text="lang === 'zh' ? '进入' : 'Enter'">
+      </button>
+    </div>
+  </div>
+
   <!-- Header -->
-  <header class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-4">
+  <header x-show="isAuthenticated" x-cloak class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-4">
     <span class="text-lg font-bold tracking-tight">⚙ Git Docker Build</span>
     <nav class="flex gap-1 ml-4">
       <template x-for="tab in tabs" :key="tab.id">
@@ -40,7 +63,7 @@
     </button>
   </header>
 
-  <main class="p-6 max-w-6xl mx-auto">
+  <main x-show="isAuthenticated" x-cloak class="p-6 max-w-6xl mx-auto">
 
     <!-- ======================== REPOS TAB ======================== -->
     <div x-show="currentTab === 'repos'" x-cloak>
