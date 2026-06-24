@@ -394,7 +394,7 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th class="text-left px-4 py-3 w-36" x-text="t('col_name')"></th>
+              <th class="text-left px-4 py-3" x-text="t('col_name')"></th>
               <th class="text-left px-4 py-3 w-48" x-text="t('col_image')"></th>
               <th class="text-left px-4 py-3 w-20" x-text="t('col_status')"></th>
               <th class="text-left px-4 py-3 w-28">ID</th>
@@ -407,7 +407,7 @@
             </template>
             <template x-for="c in containers" :key="c.id">
               <tr class="hover:bg-gray-800/40 transition-colors">
-                <td class="px-4 py-3 font-medium max-w-0 w-36 truncate" x-text="c.name"></td>
+                <td class="px-4 py-3 font-medium break-all" x-text="c.name"></td>
                 <td class="px-4 py-3 text-gray-400 text-xs font-mono max-w-0 w-48 truncate" :title="c.image" x-text="c.image"></td>
                 <td class="px-4 py-3 w-20">
                   <span :class="c.status === 'running' ? 'text-green-400' : 'text-gray-500'"
