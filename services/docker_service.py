@@ -60,6 +60,38 @@ def compose_build(
             yield line
 
 
+def run_image(image_name: str, container_name: str) -> str:
+    """Remove any existing container with the same name, then docker run -d -P."""
+    try:
+        existing = docker.container.inspect(container_name)
+        docker.container.remove(existing, force=True)
+    except Exception:
+        pass
+    result = docker.run(
+        image_name,
+        name=container_name,
+        detach=True,
+        publish_all=True,
+        restart="unless-stopped",
+    )
+    return result.id[:12] if hasattr(result, "id") else str(result)[:12]
+
+
+def compose_up(build_dir: Path, env_vars: dict | None = None) -> None:
+    """docker compose up -d"""
+    compose_file = (
+        build_dir / "docker-compose.yml"
+        if (build_dir / "docker-compose.yml").exists()
+        else build_dir / "docker-compose.yaml"
+    )
+    if env_vars:
+        with open(build_dir / ".env", "w") as f:
+            for k, v in env_vars.items():
+                f.write(f"{k}={v}\n")
+    client = DockerClient(compose_files=[str(compose_file)])
+    client.compose.up(detach=True)
+
+
 def get_images() -> list[dict]:
     images = []
     for img in docker.image.list():

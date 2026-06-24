@@ -138,9 +138,58 @@ def stream_build(build_id: int):
                 persist("success")
                 yield _sse("[DONE] Build succeeded")
 
+                # Auto-run
+                try:
+                    container_name = repo.name.lower().replace(" ", "-").replace("_", "-")
+                    if has_compose:
+                        yield _sse("[INFO] Running: docker compose up -d ...")
+                        docker_service.compose_up(build_dir, env_vars)
+                        yield _sse("[INFO] Containers started")
+                    else:
+                        yield _sse(f"[INFO] Running container '{container_name}' ...")
+                        cid = docker_service.run_image(build.image_name, container_name)
+                        yield _sse(f"[INFO] Container started: {container_name} ({cid})")
+                except Exception as run_err:
+                    yield _sse(f"[WARN] Build succeeded but failed to start container: {run_err}")
+
+                yield _sse("[DONE] All done")
+
             except Exception as e:
                 logs.append(str(e))
                 persist("failed")
                 yield _sse(f"[ERROR] {e}")
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.post("/{build_id}/run")
+def run_build(build_id: int, session: Session = Depends(get_session)):
+    """Manually start a container from a successful build."""
+    build = session.get(Build, build_id)
+    if not build:
+        raise HTTPException(status_code=404, detail="Build not found")
+    if build.status != "success":
+        raise HTTPException(status_code=400, detail="Can only run successful builds")
+
+    repo = session.get(Repository, build.repo_id)
+    repo_path = git_service.get_repo_path(repo)
+    build_dir = repo_path / repo.build_context if repo.build_context else repo_path
+
+    has_compose = (
+        (build_dir / "docker-compose.yml").exists()
+        or (build_dir / "docker-compose.yaml").exists()
+    )
+
+    envs = session.exec(select(RepoEnv).where(RepoEnv.repo_id == repo.id)).all()
+    env_vars = {e.key: e.value for e in envs}
+
+    try:
+        container_name = repo.name.lower().replace(" ", "-").replace("_", "-")
+        if has_compose:
+            docker_service.compose_up(build_dir, env_vars)
+            return {"ok": True, "message": "Containers started via docker compose up"}
+        else:
+            cid = docker_service.run_image(build.image_name, container_name)
+            return {"ok": True, "container_id": cid, "container_name": container_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

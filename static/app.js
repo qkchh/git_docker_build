@@ -40,6 +40,8 @@ function app() {
         label_build:          '构建',
         no_builds:            '暂无构建记录',
         btn_logs:             '日志',
+        btn_run:              '启动',
+        run_success:          '容器已启动',
 
         status_pending:       '等待中',
         status_running:       '构建中',
@@ -121,6 +123,8 @@ function app() {
         label_build:          'Build',
         no_builds:            'No builds yet.',
         btn_logs:             'Logs',
+        btn_run:              'Run',
+        run_success:          'Container started',
 
         status_pending:       'pending',
         status_running:       'running',
@@ -438,7 +442,7 @@ function app() {
           const box = this.$refs.logBox
           if (box) box.scrollTop = box.scrollHeight
         })
-        if (line === '[DONE] Build succeeded') {
+        if (line === '[DONE] All done') {
           this.activeBuild = { ...this.activeBuild, status: 'success' }; es.close()
         } else if (line.startsWith('[ERROR]')) {
           this.activeBuild = { ...this.activeBuild, status: 'failed' }; es.close()
@@ -453,6 +457,13 @@ function app() {
     },
 
     showBuildLog(build) { this.logModal = build },
+
+    async runBuild(build) {
+      const r = await this.apiFetch(`/api/builds/${build.id}/run`, { method: 'POST' })
+      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      this.currentTab = 'containers'
+      await this.loadContainers()
+    },
 
     // ================================================================
     // Images
