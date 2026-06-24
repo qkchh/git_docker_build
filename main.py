@@ -31,9 +31,9 @@ def on_startup():
     global ACCESS_TOKEN
     create_db()
     ACCESS_TOKEN = _load_or_create_token()
-    print("\n" + "=" * 52)
-    print(f"  Access Token: {ACCESS_TOKEN}")
-    print("=" * 52 + "\n")
+    print("\n" + "=" * 52, flush=True)
+    print(f"  Access Token: {ACCESS_TOKEN}", flush=True)
+    print("=" * 52 + "\n", flush=True)
 
 
 @app.middleware("http")

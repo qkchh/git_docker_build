@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+PORT=3002
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -9,16 +10,14 @@ PID_FILE="$SCRIPT_DIR/data/app.pid"
 
 mkdir -p "$SCRIPT_DIR/data"
 
-# ── Check if already running ───────────────────────────
-if [ -f "$PID_FILE" ]; then
-  OLD_PID=$(cat "$PID_FILE")
-  if kill -0 "$OLD_PID" 2>/dev/null; then
-    echo "Already running (pid $OLD_PID). Use ./stop.sh to stop it first."
-    exit 1
-  else
-    rm -f "$PID_FILE"
-  fi
+# ── Kill anything on port 3002 ────────────────────────
+EXISTING=$(lsof -ti tcp:$PORT 2>/dev/null || true)
+if [ -n "$EXISTING" ]; then
+  echo "Port $PORT in use (pid $EXISTING), killing..."
+  kill -9 $EXISTING 2>/dev/null || true
+  sleep 0.5
 fi
+rm -f "$PID_FILE"
 
 # ── Activate venv if present ──────────────────────────
 if [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
@@ -26,13 +25,33 @@ if [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
 fi
 
 # ── Start in background ───────────────────────────────
-nohup uvicorn main:app --host 0.0.0.0 --port 3002 >> "$LOG_FILE" 2>&1 &
+: > "$LOG_FILE"   # truncate log
+PYTHONUNBUFFERED=1 nohup uvicorn main:app --host 0.0.0.0 --port $PORT >> "$LOG_FILE" 2>&1 &
 echo $! > "$PID_FILE"
 
-echo "Started (pid $(cat "$PID_FILE"))"
-echo "Log:  $LOG_FILE"
+# ── Wait for startup (max 30s, poll every 1s) ─────────
+echo "Waiting for service to start..."
+MAX=30
+COUNT=0
+while [ $COUNT -lt $MAX ]; do
+  sleep 1
+  COUNT=$((COUNT + 1))
+  if grep -q "Access Token" "$LOG_FILE" 2>/dev/null; then
+    break
+  fi
+done
 
-# ── Wait a moment then print the access token ─────────
-sleep 1
+if ! grep -q "Access Token" "$LOG_FILE" 2>/dev/null; then
+  echo "ERROR: Service did not start within 30 seconds. Check $LOG_FILE"
+  exit 1
+fi
+
+# ── Print address & token ─────────────────────────────
+TOKEN=$(grep -m1 "Access Token" "$LOG_FILE" | sed 's/.*Access Token: //' | tr -d '[:space:]')
+
 echo ""
-grep -m1 "Access Token" "$LOG_FILE" || true
+echo "=================================================="
+echo "  URL:    http://localhost:$PORT"
+echo "  Token:  $TOKEN"
+echo "=================================================="
+echo ""
