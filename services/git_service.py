@@ -49,6 +49,25 @@ def get_repo_path(repo, *, fetch: bool = False) -> Path:
     return _get_or_clone(repo)
 
 
+def create_worktree(repo_path: Path, commit_sha: str) -> Path:
+    """Check out a specific commit to a temp directory without touching the main working tree."""
+    import time
+    worktree_dir = Path(f"/tmp/gdb-{commit_sha[:8]}-{int(time.time() * 1000)}")
+    r = git.Repo(repo_path)
+    r.git.worktree("add", "--detach", str(worktree_dir), commit_sha)
+    return worktree_dir
+
+
+def remove_worktree(repo_path: Path, worktree_dir: Path) -> None:
+    """Remove the temporary worktree created by create_worktree."""
+    try:
+        r = git.Repo(repo_path)
+        r.git.worktree("remove", "--force", str(worktree_dir))
+    except Exception:
+        import shutil
+        shutil.rmtree(worktree_dir, ignore_errors=True)
+
+
 def checkout_commit(repo_path: Path, commit_sha: str) -> None:
     """Checkout a specific commit (detached HEAD) in the workspace clone."""
     r = git.Repo(repo_path)

@@ -341,11 +341,11 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th class="text-left px-4 py-3" x-text="t('col_tags')"></th>
-              <th class="text-left px-4 py-3">ID</th>
-              <th class="text-left px-4 py-3" x-text="t('col_size')"></th>
-              <th class="text-left px-4 py-3" x-text="t('col_created')"></th>
-              <th class="px-4 py-3"></th>
+              <th class="text-left px-4 py-3 w-56" x-text="t('col_tags')"></th>
+              <th class="text-left px-4 py-3 w-28">ID</th>
+              <th class="text-left px-4 py-3 w-20" x-text="t('col_size')"></th>
+              <th class="text-left px-4 py-3 w-36" x-text="t('col_created')"></th>
+              <th class="px-4 py-3 w-px"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-800">
@@ -354,17 +354,17 @@
             </template>
             <template x-for="img in images" :key="img.id">
               <tr class="hover:bg-gray-800/40 transition-colors">
-                <td class="px-4 py-3">
-                  <div class="flex flex-wrap gap-1">
+                <td class="px-4 py-3 max-w-0 w-56">
+                  <div class="flex flex-wrap gap-1 overflow-hidden max-h-12">
                     <template x-for="tag in img.tags" :key="tag">
-                      <span class="bg-blue-900/50 text-blue-300 text-xs px-2 py-0.5 rounded" x-text="tag"></span>
+                      <span class="bg-blue-900/50 text-blue-300 text-xs px-2 py-0.5 rounded truncate max-w-full" x-text="tag"></span>
                     </template>
                   </div>
                 </td>
-                <td class="px-4 py-3 font-mono text-xs text-gray-400" x-text="img.id"></td>
-                <td class="px-4 py-3 text-gray-400" x-text="`${img.size_mb} MB`"></td>
-                <td class="px-4 py-3 text-gray-500 text-xs" x-text="formatDate(img.created)"></td>
-                <td class="px-4 py-3 text-right">
+                <td class="px-4 py-3 font-mono text-xs text-gray-400 w-28" x-text="img.id"></td>
+                <td class="px-4 py-3 text-gray-400 w-20" x-text="`${img.size_mb} MB`"></td>
+                <td class="px-4 py-3 text-gray-500 text-xs w-36" x-text="formatDate(img.created)"></td>
+                <td class="px-4 py-3 w-px whitespace-nowrap text-right">
                   <div class="flex justify-end gap-1">
                     <button @click="runImage(img)"
                       class="text-xs bg-green-800/60 hover:bg-green-700/70 text-green-400 px-2 py-1 rounded transition-colors"
@@ -394,11 +394,11 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase">
-              <th class="text-left px-4 py-3" x-text="t('col_name')"></th>
-              <th class="text-left px-4 py-3" x-text="t('col_image')"></th>
-              <th class="text-left px-4 py-3" x-text="t('col_status')"></th>
-              <th class="text-left px-4 py-3">ID</th>
-              <th class="px-4 py-3"></th>
+              <th class="text-left px-4 py-3 w-36" x-text="t('col_name')"></th>
+              <th class="text-left px-4 py-3 w-48" x-text="t('col_image')"></th>
+              <th class="text-left px-4 py-3 w-20" x-text="t('col_status')"></th>
+              <th class="text-left px-4 py-3 w-28">ID</th>
+              <th class="px-4 py-3 w-px"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-800">
@@ -407,14 +407,14 @@
             </template>
             <template x-for="c in containers" :key="c.id">
               <tr class="hover:bg-gray-800/40 transition-colors">
-                <td class="px-4 py-3 font-medium" x-text="c.name"></td>
-                <td class="px-4 py-3 text-gray-400 text-xs font-mono" x-text="c.image"></td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 font-medium max-w-0 w-36 truncate" x-text="c.name"></td>
+                <td class="px-4 py-3 text-gray-400 text-xs font-mono max-w-0 w-48 truncate" :title="c.image" x-text="c.image"></td>
+                <td class="px-4 py-3 w-20">
                   <span :class="c.status === 'running' ? 'text-green-400' : 'text-gray-500'"
                     class="text-xs font-medium" x-text="c.status"></span>
                 </td>
-                <td class="px-4 py-3 font-mono text-xs text-gray-500" x-text="c.id"></td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 font-mono text-xs text-gray-500 w-28" x-text="c.id"></td>
+                <td class="px-4 py-3 w-px whitespace-nowrap">
                   <div class="flex justify-end gap-1">
                     <button x-show="c.status !== 'running'" @click="containerAction(c.id, 'start')"
                       class="text-xs bg-green-800/50 hover:bg-green-700/50 text-green-400 px-2 py-1 rounded transition-colors"
