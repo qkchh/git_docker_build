@@ -61,20 +61,21 @@ def compose_build(
 
 
 def run_image(image_name: str, container_name: str) -> str:
-    """Remove any existing container with the same name, then docker run -d -P."""
+    """Remove any existing container with the same name, then start a new one."""
     try:
         existing = docker.container.inspect(container_name)
         docker.container.remove(existing, force=True)
     except Exception:
         pass
-    result = docker.run(
+    # Use create+start to avoid python-on-whales streaming bugs with detach=True
+    container = docker.container.create(
         image_name,
         name=container_name,
-        detach=True,
         publish_all=True,
         restart="unless-stopped",
     )
-    return result.id[:12] if hasattr(result, "id") else str(result)[:12]
+    docker.container.start(container)
+    return container.id[:12]
 
 
 def compose_up(build_dir: Path, env_vars: dict | None = None) -> None:
@@ -89,7 +90,7 @@ def compose_up(build_dir: Path, env_vars: dict | None = None) -> None:
             for k, v in env_vars.items():
                 f.write(f"{k}={v}\n")
     client = DockerClient(compose_files=[str(compose_file)])
-    client.compose.up(detach=True)
+    client.compose.up(detach=True, stream_logs=False)
 
 
 def get_images() -> list[dict]:
