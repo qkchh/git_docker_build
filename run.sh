@@ -10,7 +10,39 @@ PID_FILE="$SCRIPT_DIR/data/app.pid"
 
 mkdir -p "$SCRIPT_DIR/data"
 
-# ── Kill anything on port 3002 ────────────────────────
+# ── Detect python ─────────────────────────────────────
+if command -v python3 &>/dev/null; then
+  PYTHON=python3
+elif command -v python &>/dev/null; then
+  PYTHON=python
+else
+  echo "ERROR: python3 / python not found. Please install Python 3.12+."
+  exit 1
+fi
+
+PY_VER=$($PYTHON -c "import sys; print(sys.version_info.major)")
+if [ "$PY_VER" -lt 3 ]; then
+  echo "ERROR: Python 3 is required, but '$PYTHON' is Python $PY_VER."
+  exit 1
+fi
+
+echo "Using $($PYTHON --version)"
+
+# ── Create venv if not exists ─────────────────────────
+if [ ! -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
+  echo "Creating virtual environment..."
+  $PYTHON -m venv .venv
+fi
+
+# ── Activate venv ─────────────────────────────────────
+source "$SCRIPT_DIR/.venv/bin/activate"
+
+# ── Install / update dependencies ─────────────────────
+echo "Installing dependencies..."
+pip install -q --no-cache-dir -r requirements.txt
+echo "Dependencies ready."
+
+# ── Kill anything on port $PORT ───────────────────────
 EXISTING=$(lsof -ti tcp:$PORT 2>/dev/null || true)
 if [ -n "$EXISTING" ]; then
   echo "Port $PORT in use (pid $EXISTING), killing..."
@@ -19,18 +51,13 @@ if [ -n "$EXISTING" ]; then
 fi
 rm -f "$PID_FILE"
 
-# ── Activate venv if present ──────────────────────────
-if [ -f "$SCRIPT_DIR/.venv/bin/activate" ]; then
-  source "$SCRIPT_DIR/.venv/bin/activate"
-fi
-
 # ── Start in background ───────────────────────────────
+echo "Starting service..."
 : > "$LOG_FILE"   # truncate log
 PYTHONUNBUFFERED=1 nohup uvicorn main:app --host 0.0.0.0 --port $PORT >> "$LOG_FILE" 2>&1 &
 echo $! > "$PID_FILE"
 
 # ── Wait for startup (max 30s, poll every 1s) ─────────
-echo "Waiting for service to start..."
 MAX=30
 COUNT=0
 while [ $COUNT -lt $MAX ]; do

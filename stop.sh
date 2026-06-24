@@ -3,7 +3,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PID_FILE="$SCRIPT_DIR/data/app.pid"
 
 if [ ! -f "$PID_FILE" ]; then
-  echo "Not running (no pid file)."
+  echo "Not running (no pid file). Use ./run.sh to start."
   exit 0
 fi
 

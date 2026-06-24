@@ -57,13 +57,11 @@ git_docker_build/
 git clone https://github.com/your-username/git_docker_build.git
 cd git_docker_build
 
-# 创建虚拟环境并安装依赖
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+# 一键启动（自动检测 python/python3、创建 venv、安装依赖、后台运行）
+./run.sh
 
-# 启动服务
-uvicorn main:app --port 3002
+# 停止服务
+./stop.sh
 ```
 
 浏览器打开 [http://localhost:3002](http://localhost:3002)
