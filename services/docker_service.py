@@ -93,6 +93,20 @@ def compose_up(build_dir: Path, env_vars: dict | None = None) -> None:
     client.compose.up(detach=True, stream_logs=False)
 
 
+def run_image_by_tag(image_tag: str) -> str:
+    """Run an image by tag; derive container name from the tag."""
+    container_name = image_tag.split(":")[0].split("/")[-1].replace("_", "-")
+    return run_image(image_tag, container_name)
+
+
+def get_container_logs(container_id: str, lines: int = 200) -> str:
+    c = docker.container.inspect(container_id)
+    raw = docker.container.logs(c, tail=lines)
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", errors="replace")
+    return str(raw)
+
+
 def get_images() -> list[dict]:
     images = []
     for img in docker.image.list():

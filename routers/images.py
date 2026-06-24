@@ -35,6 +35,31 @@ class ContainerAction(BaseModel):
     action: str  # start | stop | restart | remove
 
 
+@router.post("/images/{image_id}/run")
+def run_image(image_id: str):
+    try:
+        images = docker_service.get_images()
+        image = next((img for img in images if img["id"] == image_id), None)
+        if not image:
+            raise HTTPException(status_code=404, detail="Image not found")
+        tag = next((t for t in image["tags"] if "<none>" not in t), image_id)
+        cid = docker_service.run_image_by_tag(tag)
+        return {"ok": True, "container_id": cid}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/containers/{container_id}/logs")
+def container_logs(container_id: str, lines: int = 200):
+    try:
+        logs = docker_service.get_container_logs(container_id, lines)
+        return {"logs": logs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/containers/{container_id}/action")
 def container_action(container_id: str, body: ContainerAction):
     try:

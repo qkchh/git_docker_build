@@ -41,7 +41,8 @@ function app() {
         no_builds:            '暂无构建记录',
         btn_logs:             '日志',
         btn_run:              '启动',
-        run_success:          '容器已启动',
+        container_log_title:  '容器日志',
+        no_container_logs:    '（无日志）',
 
         status_pending:       '等待中',
         status_running:       '构建中',
@@ -124,7 +125,8 @@ function app() {
         no_builds:            'No builds yet.',
         btn_logs:             'Logs',
         btn_run:              'Run',
-        run_success:          'Container started',
+        container_log_title:  'Container Logs',
+        no_container_logs:    '(no logs)',
 
         status_pending:       'pending',
         status_running:       'running',
@@ -276,6 +278,7 @@ function app() {
     // Images & Containers
     images: [],
     containers: [],
+    containerLogModal: null,
 
     // ================================================================
     // Init
@@ -458,19 +461,19 @@ function app() {
 
     showBuildLog(build) { this.logModal = build },
 
-    async runBuild(build) {
-      const r = await this.apiFetch(`/api/builds/${build.id}/run`, { method: 'POST' })
-      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
-      this.currentTab = 'containers'
-      await this.loadContainers()
-    },
-
     // ================================================================
     // Images
     // ================================================================
     async loadImages() {
       const r = await this.apiFetch('/api/images')
       if (r.ok) this.images = await r.json()
+    },
+
+    async runImage(img) {
+      const r = await this.apiFetch(`/api/images/${img.id}/run`, { method: 'POST' })
+      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      this.currentTab = 'containers'
+      await this.loadContainers()
     },
 
     async deleteImage(id) {
@@ -486,6 +489,13 @@ function app() {
     async loadContainers() {
       const r = await this.apiFetch('/api/containers')
       if (r.ok) this.containers = await r.json()
+    },
+
+    async viewContainerLogs(c) {
+      const r = await this.apiFetch(`/api/containers/${c.id}/logs`)
+      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      const { logs } = await r.json()
+      this.containerLogModal = { name: c.name, logs: logs || this.t('no_container_logs') }
     },
 
     async containerAction(id, action) {

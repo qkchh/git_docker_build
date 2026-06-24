@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import git
@@ -5,9 +6,21 @@ import git
 WORKSPACE_DIR = Path("workspace")
 
 
+def _repo_dir_name(repo) -> str:
+    """Sanitize repo name for use as a directory name."""
+    name = re.sub(r"[^a-z0-9]+", "-", repo.name.lower()).strip("-")
+    return name or f"repo-{repo.id}"
+
+
 def _get_or_clone(repo) -> Path:
     """Clone remote repo to workspace, or fetch latest if already exists."""
-    repo_dir = WORKSPACE_DIR / str(repo.id)
+    repo_dir = WORKSPACE_DIR / _repo_dir_name(repo)
+
+    # Migrate from old ID-based path if needed
+    old_dir = WORKSPACE_DIR / str(repo.id)
+    if old_dir.exists() and not repo_dir.exists():
+        old_dir.rename(repo_dir)
+
     if repo_dir.exists():
         r = git.Repo(repo_dir)
         r.git.fetch("origin", "--tags", "--prune")
@@ -17,9 +30,22 @@ def _get_or_clone(repo) -> Path:
     return repo_dir
 
 
-def get_repo_path(repo) -> Path:
+def _try_fetch_local(repo_path: Path) -> None:
+    """If a local repo has a remote, fetch silently to get latest commits."""
+    try:
+        r = git.Repo(repo_path)
+        if r.remotes:
+            r.git.fetch("origin", "--tags", "--prune")
+    except Exception:
+        pass
+
+
+def get_repo_path(repo, *, fetch: bool = False) -> Path:
     if repo.source_type == "local":
-        return Path(repo.local_path)
+        path = Path(repo.local_path)
+        if fetch:
+            _try_fetch_local(path)
+        return path
     return _get_or_clone(repo)
 
 
@@ -32,7 +58,7 @@ def checkout_commit(repo_path: Path, commit_sha: str) -> None:
 def get_commits(repo_path: Path, limit: int = 50) -> list[dict]:
     r = git.Repo(repo_path)
     commits = []
-    for commit in r.iter_commits("--all", max_count=limit):
+    for commit in r.iter_commits("--all", max_count=limit, date_order=True):
         commits.append(
             {
                 "sha": commit.hexsha,

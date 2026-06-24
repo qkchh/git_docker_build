@@ -320,10 +320,6 @@
             </div>
             <div class="flex items-center gap-4">
               <span class="text-xs text-gray-600" x-text="formatDate(build.created_at)"></span>
-              <button x-show="build.status === 'success'" @click="runBuild(build)"
-                class="text-xs bg-green-800/60 hover:bg-green-700/70 text-green-400 px-3 py-1 rounded transition-colors"
-                x-text="t('btn_run')">
-              </button>
               <button x-show="build.log" @click="showBuildLog(build)"
                 class="text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded transition-colors"
                 x-text="t('btn_logs')">
@@ -369,10 +365,16 @@
                 <td class="px-4 py-3 text-gray-400" x-text="`${img.size_mb} MB`"></td>
                 <td class="px-4 py-3 text-gray-500 text-xs" x-text="formatDate(img.created)"></td>
                 <td class="px-4 py-3 text-right">
-                  <button @click="deleteImage(img.id)"
-                    class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
-                    x-text="t('btn_remove')">
-                  </button>
+                  <div class="flex justify-end gap-1">
+                    <button @click="runImage(img)"
+                      class="text-xs bg-green-800/60 hover:bg-green-700/70 text-green-400 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_run')">
+                    </button>
+                    <button @click="deleteImage(img.id)"
+                      class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_remove')">
+                    </button>
+                  </div>
                 </td>
               </tr>
             </template>
@@ -426,6 +428,10 @@
                       class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
                       x-text="t('btn_restart')">
                     </button>
+                    <button @click="viewContainerLogs(c)"
+                      class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition-colors"
+                      x-text="t('btn_logs')">
+                    </button>
                     <button @click="containerAction(c.id, 'remove')"
                       class="text-xs text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
                       x-text="t('btn_remove')">
@@ -452,6 +458,23 @@
       </div>
       <div class="log-box bg-black/40 p-4 overflow-y-auto flex-1 whitespace-pre-wrap text-gray-300"
         x-text="logModal?.log || t('no_log')"></div>
+    </div>
+  </div>
+
+  <!-- Container Log Modal -->
+  <div x-show="containerLogModal" x-cloak
+    class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+    @click.self="containerLogModal = null">
+    <div class="bg-gray-900 border border-gray-700 rounded-lg w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between shrink-0">
+        <span class="font-medium text-sm">
+          <span x-text="t('container_log_title')"></span> —
+          <span class="text-blue-400" x-text="containerLogModal?.name"></span>
+        </span>
+        <button @click="containerLogModal = null" class="text-gray-500 hover:text-white">✕</button>
+      </div>
+      <div class="log-box bg-black/40 p-4 overflow-y-auto flex-1 whitespace-pre-wrap text-gray-300 text-xs"
+        x-text="containerLogModal?.logs"></div>
     </div>
   </div>
 

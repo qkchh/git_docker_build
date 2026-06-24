@@ -58,7 +58,7 @@ def get_commits(repo_id: int, session: Session = Depends(get_session)):
     if not repo:
         raise HTTPException(status_code=404, detail="Repo not found")
     try:
-        repo_path = git_service.get_repo_path(repo)
+        repo_path = git_service.get_repo_path(repo, fetch=True)
         return git_service.get_commits(repo_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
