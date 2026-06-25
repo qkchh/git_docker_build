@@ -82,6 +82,9 @@ function app() {
         paste_placeholder:    '粘贴 .env 内容，例如：\nDB_HOST=localhost\nSECRET_KEY=abc123',
         import_success:       '已导入',
         import_unit:          '条',
+        btn_edit:             '编辑',
+        btn_save_edit:        '保存',
+        btn_cancel_edit:      '取消',
 
         confirm_delete_repo:       '确定要删除该仓库吗？',
         confirm_remove_image:      '确定要删除该镜像吗？',
@@ -166,6 +169,9 @@ function app() {
         paste_placeholder:    'Paste .env content, e.g.:\nDB_HOST=localhost\nSECRET_KEY=abc123',
         import_success:       'Imported',
         import_unit:          'vars',
+        btn_edit:             'Edit',
+        btn_save_edit:        'Save',
+        btn_cancel_edit:      'Cancel',
 
         confirm_delete_repo:       'Delete this repository?',
         confirm_remove_image:      'Remove this image?',
@@ -266,6 +272,9 @@ function app() {
     showPasteArea: false,
     pasteContent: '',
     importMsg: '',
+    editingEnvId: null,
+    editingEnvKey: '',
+    editingEnvVal: '',
 
     // Builds
     builds: [],
@@ -387,6 +396,31 @@ function app() {
 
     async deleteEnvVar(env) {
       await this.apiFetch(`/api/repos/${this.selectedEnvRepo.id}/envs/${env.id}`, { method: 'DELETE' })
+      await this.loadEnvVars(this.selectedEnvRepo)
+    },
+
+    startEditEnv(env) {
+      this.editingEnvId = env.id
+      this.editingEnvKey = env.key
+      this.editingEnvVal = env.value
+    },
+
+    cancelEditEnv() {
+      this.editingEnvId = null
+      this.editingEnvKey = ''
+      this.editingEnvVal = ''
+    },
+
+    async saveEditEnv(env) {
+      const key = this.editingEnvKey.trim()
+      if (!key) return
+      const r = await this.apiFetch(`/api/repos/${this.selectedEnvRepo.id}/envs/${env.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: this.editingEnvVal }),
+      })
+      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      this.cancelEditEnv()
       await this.loadEnvVars(this.selectedEnvRepo)
     },
 

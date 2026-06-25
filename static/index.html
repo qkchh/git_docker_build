@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Git Docker Build</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="/static/app.js?v=20260624"></script>
+  <script defer src="/static/app.js?v=20260625"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
@@ -216,7 +216,7 @@
               class="text-xs px-3 py-1.5 rounded bg-gray-800 text-gray-400 hover:text-white transition-colors"
               x-text="t('btn_export_env')">
             </button>
-            <button @click="selectedEnvRepo = null; envVars = []; showPasteArea = false"
+            <button @click="selectedEnvRepo = null; envVars = []; showPasteArea = false; editingEnvId = null"
               class="text-gray-500 hover:text-white ml-1">✕</button>
           </div>
         </div>
@@ -261,16 +261,41 @@
             <p class="text-gray-500 text-sm py-5 text-center" x-text="t('no_env_vars')"></p>
           </template>
           <template x-for="env in envVars" :key="env.id">
-            <div class="px-5 py-2.5 flex items-center justify-between hover:bg-gray-800/40 transition-colors">
-              <div class="flex items-center gap-3 font-mono text-sm min-w-0">
-                <span class="text-indigo-300 shrink-0" x-text="env.key"></span>
-                <span class="text-gray-600">=</span>
-                <span class="text-gray-400 truncate" x-text="env.value"></span>
+            <div class="px-5 py-2 hover:bg-gray-800/40 transition-colors">
+              <!-- View row -->
+              <div x-show="editingEnvId !== env.id" class="flex items-center justify-between">
+                <div class="flex items-center gap-3 font-mono text-sm min-w-0">
+                  <span class="text-indigo-300 shrink-0" x-text="env.key"></span>
+                  <span class="text-gray-600">=</span>
+                  <span class="text-gray-400 truncate" x-text="env.value"></span>
+                </div>
+                <div class="flex items-center gap-1 shrink-0 ml-3">
+                  <button @click="startEditEnv(env)"
+                    class="text-gray-400 hover:text-white text-xs hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                    x-text="t('btn_edit')">
+                  </button>
+                  <button @click="deleteEnvVar(env)"
+                    class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                    x-text="t('btn_delete')">
+                  </button>
+                </div>
               </div>
-              <button @click="deleteEnvVar(env)"
-                class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded transition-colors shrink-0 ml-3"
-                x-text="t('btn_delete')">
-              </button>
+              <!-- Edit row -->
+              <div x-show="editingEnvId === env.id" class="flex items-center gap-2">
+                <input x-model="editingEnvKey" type="text" @keydown.enter="saveEditEnv(env)" @keydown.escape="cancelEditEnv()"
+                  class="w-36 bg-gray-800 border border-indigo-600 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-indigo-400 shrink-0" />
+                <span class="text-gray-600 text-sm">=</span>
+                <input x-model="editingEnvVal" type="text" @keydown.enter="saveEditEnv(env)" @keydown.escape="cancelEditEnv()"
+                  class="flex-1 bg-gray-800 border border-indigo-600 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-indigo-400" />
+                <button @click="saveEditEnv(env)"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded transition-colors shrink-0"
+                  x-text="t('btn_save_edit')">
+                </button>
+                <button @click="cancelEditEnv()"
+                  class="bg-gray-700 hover:bg-gray-600 text-xs px-2.5 py-1 rounded transition-colors shrink-0"
+                  x-text="t('btn_cancel_edit')">
+                </button>
+              </div>
             </div>
           </template>
         </div>

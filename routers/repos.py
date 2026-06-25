@@ -115,6 +115,26 @@ def bulk_import_envs(repo_id: int, data: EnvBulkImport, session: Session = Depen
     return {"imported": imported}
 
 
+class EnvUpdate(BaseModel):
+    key: Optional[str] = None
+    value: Optional[str] = None
+
+
+@router.patch("/{repo_id}/envs/{env_id}")
+def update_env(repo_id: int, env_id: int, data: EnvUpdate, session: Session = Depends(get_session)):
+    env = session.get(RepoEnv, env_id)
+    if not env or env.repo_id != repo_id:
+        raise HTTPException(status_code=404, detail="Env var not found")
+    if data.key is not None:
+        env.key = data.key.strip()
+    if data.value is not None:
+        env.value = data.value
+    session.add(env)
+    session.commit()
+    session.refresh(env)
+    return env
+
+
 @router.delete("/{repo_id}/envs/{env_id}")
 def delete_env(repo_id: int, env_id: int, session: Session = Depends(get_session)):
     env = session.get(RepoEnv, env_id)
