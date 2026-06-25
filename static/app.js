@@ -43,6 +43,7 @@ function app() {
         btn_run:              '启动',
         container_log_title:  '容器日志',
         no_container_logs:    '（无日志）',
+        btn_refresh_logs:     '刷新',
 
         status_pending:       '等待中',
         status_running:       '构建中',
@@ -132,6 +133,7 @@ function app() {
         btn_run:              'Run',
         container_log_title:  'Container Logs',
         no_container_logs:    '(no logs)',
+        btn_refresh_logs:     'Refresh',
 
         status_pending:       'pending',
         status_running:       'running',
@@ -292,6 +294,7 @@ function app() {
     images: [],
     containers: [],
     containerLogModal: null,
+    containerLogsRefreshing: false,
 
     // ================================================================
     // Init
@@ -540,7 +543,20 @@ function app() {
       const r = await this.apiFetch(`/api/containers/${c.id}/logs`)
       if (!r.ok) { const e = await r.json(); alert(e.detail); return }
       const { logs } = await r.json()
-      this.containerLogModal = { name: c.name, logs: logs || this.t('no_container_logs') }
+      this.containerLogModal = { id: c.id, name: c.name, logs: logs || this.t('no_container_logs') }
+    },
+
+    async refreshContainerLogs() {
+      if (!this.containerLogModal || this.containerLogsRefreshing) return
+      this.containerLogsRefreshing = true
+      try {
+        const r = await this.apiFetch(`/api/containers/${this.containerLogModal.id}/logs`)
+        if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+        const { logs } = await r.json()
+        this.containerLogModal = { ...this.containerLogModal, logs: logs || this.t('no_container_logs') }
+      } finally {
+        this.containerLogsRefreshing = false
+      }
     },
 
     async containerAction(id, action) {
