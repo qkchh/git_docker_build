@@ -41,7 +41,7 @@ def build_image(
     cmd = ["docker", "build", "--progress=plain", "-t", image_name]
     for k, v in (env_vars or {}).items():
         cmd += ["--build-arg", f"{k}={v}"]
-    cmd.append(str(build_dir))
+    cmd.append(str(build_dir.resolve()))
 
     proc = subprocess.Popen(
         cmd,
@@ -84,13 +84,8 @@ def compose_build(
             for k, v in env_vars.items():
                 f.write(f"{k}={v}\n")
 
-    compose_file = (
-        build_dir / "docker-compose.yml"
-        if (build_dir / "docker-compose.yml").exists()
-        else build_dir / "docker-compose.yaml"
-    )
-
-    cmd = ["docker", "compose", "-f", str(compose_file), "build", "--progress=plain"]
+    # --progress is a global docker compose flag; cwd lets compose find the file automatically
+    cmd = ["docker", "compose", "--progress", "plain", "build"]
 
     proc = subprocess.Popen(
         cmd,
@@ -98,7 +93,7 @@ def compose_build(
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
-        cwd=str(build_dir),
+        cwd=str(build_dir.resolve()),
     )
 
     if cancel_event:
