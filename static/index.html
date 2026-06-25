@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Git Docker Build</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="/static/app.js?v=20260625"></script>
+  <script defer src="/static/app.js?v=20260625b"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     [x-cloak] { display: none !important; }
     .log-box { font-family: 'Menlo', 'Monaco', monospace; font-size: 12px; }
-    .status-running  { color: #f59e0b; }
-    .status-success  { color: #10b981; }
-    .status-failed   { color: #ef4444; }
-    .status-pending  { color: #6b7280; }
+    .status-running   { color: #f59e0b; }
+    .status-success   { color: #10b981; }
+    .status-failed    { color: #ef4444; }
+    .status-pending   { color: #6b7280; }
+    .status-cancelled { color: #9ca3af; }
   </style>
 </head>
 <body class="bg-gray-950 text-gray-100 min-h-screen" x-data="app()" x-init="init()">
@@ -319,7 +320,13 @@
             <span :class="`status-${activeBuild?.status}`" class="text-xs font-medium"
               x-text="t('status_' + (activeBuild?.status || 'pending'))"></span>
           </div>
-          <button @click="activeBuild = null; buildLog = []" class="text-gray-500 hover:text-white text-sm">✕</button>
+          <div class="flex items-center gap-2">
+            <button x-show="activeBuild?.status === 'running'" @click="cancelBuild()"
+              class="bg-red-700 hover:bg-red-600 px-3 py-1 rounded text-xs font-medium transition-colors"
+              x-text="t('btn_cancel_build')">
+            </button>
+            <button @click="activeBuild = null; buildLog = []" class="text-gray-500 hover:text-white text-sm">✕</button>
+          </div>
         </div>
         <div class="log-box bg-black/40 p-4 h-72 overflow-y-auto" x-ref="logBox">
           <template x-for="(line, i) in buildLog" :key="i">

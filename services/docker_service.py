@@ -1,13 +1,31 @@
+import subprocess
+import threading
 from pathlib import Path
 from typing import Generator
 
 from python_on_whales import DockerClient, docker
 
 
+class BuildCancelled(Exception):
+    """Raised when a build is cancelled by the user."""
+
+
+def _kill_on_cancel(cancel_event: threading.Event, proc: subprocess.Popen) -> None:
+    """Background daemon thread: terminates proc as soon as cancel_event is set."""
+    cancel_event.wait()
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+
 def build_image(
     build_dir: Path,
     image_name: str,
     env_vars: dict[str, str] | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> Generator[str, None, None]:
     """Stream docker build output line by line.
 
@@ -16,23 +34,49 @@ def build_image(
     - Passed as --build-arg      (for ARG instructions in Dockerfile)
     """
     if env_vars:
-        env_file = build_dir / ".env"
-        with open(env_file, "w") as f:
+        with open(build_dir / ".env", "w") as f:
             for k, v in env_vars.items():
                 f.write(f"{k}={v}\n")
 
-    for line in docker.build(
-        build_dir,
-        tags=[image_name],
-        build_args=env_vars or {},
-        stream_logs=True,
-    ):
-        yield line
+    cmd = ["docker", "build", "--progress=plain", "-t", image_name]
+    for k, v in (env_vars or {}).items():
+        cmd += ["--build-arg", f"{k}={v}"]
+    cmd.append(str(build_dir))
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    if cancel_event:
+        threading.Thread(target=_kill_on_cancel, args=(cancel_event, proc), daemon=True).start()
+
+    try:
+        for line in proc.stdout:
+            line = line.rstrip()
+            if line:
+                yield line
+        proc.wait()
+        if cancel_event and cancel_event.is_set():
+            raise BuildCancelled()
+        if proc.returncode != 0:
+            raise RuntimeError(f"docker build exited with code {proc.returncode}")
+    except BuildCancelled:
+        raise
+    except Exception:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        raise
 
 
 def compose_build(
     build_dir: Path,
     env_vars: dict[str, str] | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> Generator[str, None, None]:
     """Stream docker compose build output line by line."""
     if env_vars:
@@ -45,19 +89,38 @@ def compose_build(
         if (build_dir / "docker-compose.yml").exists()
         else build_dir / "docker-compose.yaml"
     )
-    client = DockerClient(compose_files=[str(compose_file)])
-    for item in client.compose.build(stream_logs=True):
-        # python-on-whales compose returns (stream_type, bytes) tuples
-        if isinstance(item, tuple):
-            content = item[1]
-        else:
-            content = item
-        if isinstance(content, bytes):
-            line = content.decode("utf-8", errors="replace").rstrip()
-        else:
-            line = str(content).rstrip()
-        if line:
-            yield line
+
+    cmd = ["docker", "compose", "-f", str(compose_file), "build", "--progress=plain"]
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        cwd=str(build_dir),
+    )
+
+    if cancel_event:
+        threading.Thread(target=_kill_on_cancel, args=(cancel_event, proc), daemon=True).start()
+
+    try:
+        for line in proc.stdout:
+            line = line.rstrip()
+            if line:
+                yield line
+        proc.wait()
+        if cancel_event and cancel_event.is_set():
+            raise BuildCancelled()
+        if proc.returncode != 0:
+            raise RuntimeError(f"docker compose build exited with code {proc.returncode}")
+    except BuildCancelled:
+        raise
+    except Exception:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+        raise
 
 
 def run_image(image_name: str, container_name: str) -> str:

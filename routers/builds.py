@@ -1,4 +1,5 @@
 import json
+import threading
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +10,10 @@ from sqlmodel import Session, select
 from database import engine, get_session
 from models import Build, Repository, RepoEnv
 from services import docker_service, git_service
+from services.docker_service import BuildCancelled
+
+# build_id -> cancel Event for currently running builds
+_cancel_events: dict[int, threading.Event] = {}
 
 router = APIRouter(prefix="/api/builds", tags=["builds"])
 
@@ -63,19 +68,23 @@ def stream_build(build_id: int):
     """SSE endpoint — streams live docker build output."""
 
     def generate():
+        cancel_event = threading.Event()
+        _cancel_events[build_id] = cancel_event
+
         with Session(engine) as session:
             build = session.get(Build, build_id)
             if not build:
                 yield _sse("[ERROR] Build not found")
+                _cancel_events.pop(build_id, None)
                 return
 
             repo = session.get(Repository, build.repo_id)
             if not repo:
                 yield _sse("[ERROR] Repo not found")
+                _cancel_events.pop(build_id, None)
                 return
 
             logs: list[str] = []
-            repo_path = None
 
             def persist(status: str):
                 build.status = status
@@ -89,7 +98,7 @@ def stream_build(build_id: int):
                 session.commit()
 
                 # Step 1 — resolve workspace clone (clone/fetch as needed)
-                yield _sse(f"[INFO] Resolving repository...")
+                yield _sse("[INFO] Resolving repository...")
                 repo_path = git_service.get_repo_path(repo)
 
                 # Step 2 — checkout the specific commit in the workspace clone
@@ -121,13 +130,13 @@ def stream_build(build_id: int):
 
                 # Step 5 — build
                 if has_compose:
-                    yield _sse(f"[INFO] Found docker-compose.yml → docker compose build")
-                    for line in docker_service.compose_build(build_dir, env_vars):
+                    yield _sse("[INFO] Found docker-compose.yml → docker compose build")
+                    for line in docker_service.compose_build(build_dir, env_vars, cancel_event):
                         logs.append(line)
                         yield _sse(line)
                 else:
                     yield _sse(f"[INFO] Starting docker build → {build.image_name}")
-                    for line in docker_service.build_image(build_dir, build.image_name, env_vars):
+                    for line in docker_service.build_image(build_dir, build.image_name, env_vars, cancel_event):
                         logs.append(line)
                         yield _sse(line)
 
@@ -150,12 +159,30 @@ def stream_build(build_id: int):
 
                 yield _sse("[DONE] All done")
 
+            except BuildCancelled:
+                logs.append("Cancelled by user")
+                persist("cancelled")
+                yield _sse("[CANCELLED] Build cancelled")
+
             except Exception as e:
                 logs.append(str(e))
                 persist("failed")
                 yield _sse(f"[ERROR] {e}")
 
+            finally:
+                _cancel_events.pop(build_id, None)
+
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.post("/{build_id}/cancel")
+def cancel_build(build_id: int):
+    """Signal a running build to stop."""
+    event = _cancel_events.get(build_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Build not running")
+    event.set()
+    return {"ok": True}
 
 
 @router.post("/{build_id}/run")

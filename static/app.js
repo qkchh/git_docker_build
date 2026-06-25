@@ -48,6 +48,8 @@ function app() {
         status_running:       '构建中',
         status_success:       '成功',
         status_failed:        '失败',
+        status_cancelled:     '已取消',
+        btn_cancel_build:     '取消构建',
 
         heading_images:       'Docker 镜像',
         col_tags:             '标签',
@@ -135,6 +137,8 @@ function app() {
         status_running:       'running',
         status_success:       'success',
         status_failed:        'failed',
+        status_cancelled:     'cancelled',
+        btn_cancel_build:     'Cancel Build',
 
         heading_images:       'Docker Images',
         col_tags:             'Tags',
@@ -454,6 +458,11 @@ function app() {
     // ================================================================
     // Builds
     // ================================================================
+    async cancelBuild() {
+      if (!this.activeBuild) return
+      await this.apiFetch(`/api/builds/${this.activeBuild.id}/cancel`, { method: 'POST' })
+    },
+
     async triggerBuild(repo, commit) {
       const r = await this.apiFetch('/api/builds', {
         method: 'POST',
@@ -483,6 +492,8 @@ function app() {
           this.activeBuild = { ...this.activeBuild, status: 'success' }; es.close()
         } else if (line.startsWith('[ERROR]')) {
           this.activeBuild = { ...this.activeBuild, status: 'failed' }; es.close()
+        } else if (line.startsWith('[CANCELLED]')) {
+          this.activeBuild = { ...this.activeBuild, status: 'cancelled' }; es.close()
         }
       }
       es.onerror = () => es.close()
