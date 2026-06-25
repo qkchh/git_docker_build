@@ -76,7 +76,6 @@ def stream_build(build_id: int):
 
             logs: list[str] = []
             repo_path = None
-            worktree_path = None
 
             def persist(status: str):
                 build.status = status
@@ -89,22 +88,14 @@ def stream_build(build_id: int):
                 session.add(build)
                 session.commit()
 
-                # Step 1 — resolve workspace path (clone/fetch if remote)
+                # Step 1 — resolve workspace clone (clone/fetch as needed)
                 yield _sse(f"[INFO] Resolving repository...")
                 repo_path = git_service.get_repo_path(repo)
 
-                # Step 2 — checkout the specific commit
-                #   Remote → checkout in the cloned workspace (detached HEAD)
-                #   Local  → create a temporary worktree so the main working
-                #            directory is never touched
-                if repo.source_type == "remote":
-                    yield _sse(f"[INFO] Checking out commit {build.commit_sha[:8]}...")
-                    git_service.checkout_commit(repo_path, build.commit_sha)
-                    build_root = repo_path
-                else:
-                    yield _sse(f"[INFO] Checking out commit {build.commit_sha[:8]} (worktree)...")
-                    worktree_path = git_service.create_worktree(repo_path, build.commit_sha)
-                    build_root = worktree_path
+                # Step 2 — checkout the specific commit in the workspace clone
+                yield _sse(f"[INFO] Checking out commit {build.commit_sha[:8]}...")
+                git_service.checkout_commit(repo_path, build.commit_sha)
+                build_root = repo_path
 
                 build_dir = build_root / repo.build_context if repo.build_context else build_root
 
@@ -163,10 +154,6 @@ def stream_build(build_id: int):
                 logs.append(str(e))
                 persist("failed")
                 yield _sse(f"[ERROR] {e}")
-
-            finally:
-                if worktree_path and repo_path:
-                    git_service.remove_worktree(repo_path, worktree_path)
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

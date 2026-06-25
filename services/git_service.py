@@ -13,7 +13,12 @@ def _repo_dir_name(repo) -> str:
 
 
 def _get_or_clone(repo) -> Path:
-    """Clone remote repo to workspace, or fetch latest if already exists."""
+    """Clone repo to workspace/, or fetch latest if already exists.
+
+    Works for both remote (git_url) and local (local_path) repos.
+    Local repos are cloned from their local_path; 'origin' then points
+    back to that path so subsequent fetches pick up new commits.
+    """
     repo_dir = WORKSPACE_DIR / _repo_dir_name(repo)
 
     # Migrate from old ID-based path if needed
@@ -21,51 +26,23 @@ def _get_or_clone(repo) -> Path:
     if old_dir.exists() and not repo_dir.exists():
         old_dir.rename(repo_dir)
 
+    clone_url = repo.git_url if repo.source_type == "remote" else repo.local_path
+
     if repo_dir.exists():
         r = git.Repo(repo_dir)
-        r.git.fetch("origin", "--tags", "--prune")
+        try:
+            r.git.fetch("origin", "--tags", "--prune")
+        except Exception:
+            pass  # local source may have no network; best-effort
     else:
         repo_dir.mkdir(parents=True, exist_ok=True)
-        git.Repo.clone_from(repo.git_url, repo_dir)
+        git.Repo.clone_from(clone_url, repo_dir)
     return repo_dir
 
 
-def _try_fetch_local(repo_path: Path) -> None:
-    """If a local repo has a remote, fetch silently to get latest commits."""
-    try:
-        r = git.Repo(repo_path)
-        if r.remotes:
-            r.git.fetch("origin", "--tags", "--prune")
-    except Exception:
-        pass
-
-
 def get_repo_path(repo, *, fetch: bool = False) -> Path:
-    if repo.source_type == "local":
-        path = Path(repo.local_path)
-        if fetch:
-            _try_fetch_local(path)
-        return path
+    """Return the workspace clone path for any repo (remote or local)."""
     return _get_or_clone(repo)
-
-
-def create_worktree(repo_path: Path, commit_sha: str) -> Path:
-    """Check out a specific commit to a temp directory without touching the main working tree."""
-    import time
-    worktree_dir = Path(f"/tmp/gdb-{commit_sha[:8]}-{int(time.time() * 1000)}")
-    r = git.Repo(repo_path)
-    r.git.worktree("add", "--detach", str(worktree_dir), commit_sha)
-    return worktree_dir
-
-
-def remove_worktree(repo_path: Path, worktree_dir: Path) -> None:
-    """Remove the temporary worktree created by create_worktree."""
-    try:
-        r = git.Repo(repo_path)
-        r.git.worktree("remove", "--force", str(worktree_dir))
-    except Exception:
-        import shutil
-        shutil.rmtree(worktree_dir, ignore_errors=True)
 
 
 def checkout_commit(repo_path: Path, commit_sha: str) -> None:
