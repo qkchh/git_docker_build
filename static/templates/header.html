@@ -1,0 +1,19 @@
+<header x-show="isAuthenticated" x-cloak class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-4">
+  <span class="text-lg font-bold tracking-tight">⚙ Git Docker Build</span>
+  <nav class="flex gap-1 ml-4">
+    <template x-for="tab in tabs" :key="tab.id">
+      <button
+        @click="currentTab = tab.id"
+        :class="currentTab === tab.id
+          ? 'bg-blue-600 text-white'
+          : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+        class="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+        x-text="t('tab_' + tab.id)">
+      </button>
+    </template>
+  </nav>
+  <button @click="toggleLang()"
+    class="ml-auto text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+    x-text="lang === 'zh' ? 'EN' : '中文'">
+  </button>
+</header>

@@ -1,0 +1,244 @@
+<div x-show="currentTab === 'repos'" x-cloak>
+
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-semibold" x-text="t('heading_repos')"></h2>
+    <button @click="showAddRepo = !showAddRepo"
+      class="btn-primary"
+      x-text="t('btn_add_repo')">
+    </button>
+  </div>
+
+  <!-- Add Repo Form -->
+  <div x-show="showAddRepo" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-5 shadow-md ring-1 ring-white/5">
+    <h3 class="font-medium mb-4 text-gray-300" x-text="t('form_new_repo')"></h3>
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" x-text="t('label_name')"></label>
+        <input x-model="newRepo.name" type="text" :placeholder="t('placeholder_name')"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1" x-text="t('label_source_type')"></label>
+        <select x-model="newRepo.source_type"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+          <option value="remote" x-text="t('opt_remote')"></option>
+          <option value="local" x-text="t('opt_local')"></option>
+        </select>
+      </div>
+    </div>
+    <div class="mb-4">
+      <template x-if="newRepo.source_type === 'remote'">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1" x-text="t('label_github_url')"></label>
+          <input x-model="newRepo.git_url" type="text" placeholder="https://github.com/user/repo.git"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+      </template>
+      <template x-if="newRepo.source_type === 'local'">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1" x-text="t('label_local_path')"></label>
+          <input x-model="newRepo.local_path" type="text" :placeholder="t('placeholder_local_path')"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" />
+        </div>
+      </template>
+    </div>
+    <div class="flex gap-2">
+      <button @click="createRepo()"
+        class="btn-primary"
+        x-text="t('btn_save')">
+      </button>
+      <button @click="showAddRepo = false; resetNewRepo()"
+        class="btn-secondary"
+        x-text="t('btn_cancel')">
+      </button>
+    </div>
+    <p x-show="formError" x-text="formError" class="text-red-400 text-sm mt-2"></p>
+  </div>
+
+  <!-- Repo List -->
+  <div class="space-y-2">
+    <template x-if="repos.length === 0">
+      <div class="flex flex-col items-center justify-center py-16 text-center">
+        <div class="text-4xl mb-3 opacity-30">📦</div>
+        <p class="text-gray-500 text-sm" x-text="t('no_repos')"></p>
+      </div>
+    </template>
+    <template x-for="repo in repos" :key="repo.id">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between shadow-md hover:border-gray-700 ring-1 ring-white/5 transition-all">
+        <div class="flex items-center gap-3">
+          <span class="text-lg" x-text="repo.source_type === 'remote' ? '☁️' : '💻'"></span>
+          <div>
+            <div class="font-medium" x-text="repo.name"></div>
+            <div class="text-xs text-gray-500" x-text="repo.git_url || repo.local_path"></div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button @click="openRepo(repo)"
+            class="btn-secondary btn-sm"
+            x-text="t('btn_browse_commits')">
+          </button>
+          <button @click="openEnvPanel(repo)"
+            :class="selectedEnvRepo?.id === repo.id ? 'bg-indigo-700 text-white hover:bg-indigo-600' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            x-text="t('btn_env_vars')">
+          </button>
+          <button @click="deleteRepo(repo.id)"
+            class="btn-danger btn-sm"
+            x-text="t('btn_delete')">
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+</div>
+
+<!-- ======================== COMMITS PANEL ======================== -->
+<div x-show="currentTab === 'repos' && selectedRepo" x-cloak class="mt-6">
+  <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-md ring-1 ring-white/5">
+    <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+      <h3 class="font-medium">
+        <span x-text="t('heading_commits')"></span> —
+        <span class="text-blue-400" x-text="selectedRepo?.name"></span>
+      </h3>
+      <div class="flex items-center gap-3">
+        <button @click="loadCommits(selectedRepo)" class="text-xs text-gray-400 hover:text-white transition-colors"
+          x-text="'↻ ' + t('btn_refresh')"></button>
+        <button @click="selectedRepo = null; commits = []" class="text-gray-500 hover:text-white transition-colors">✕</button>
+      </div>
+    </div>
+
+    <div x-show="loadingCommits" class="py-8 text-center text-gray-500 text-sm" x-text="t('loading_commits')"></div>
+
+    <div x-show="!loadingCommits" class="divide-y divide-gray-800 max-h-96 overflow-y-auto">
+      <template x-if="commits.length === 0">
+        <div class="flex flex-col items-center justify-center py-10 text-center">
+          <div class="text-3xl mb-2 opacity-30">📝</div>
+          <p class="text-gray-500 text-sm" x-text="t('no_commits')"></p>
+        </div>
+      </template>
+      <template x-for="commit in commits" :key="commit.sha">
+        <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors">
+          <div class="flex items-center gap-3 min-w-0">
+            <code class="text-xs bg-gray-800 px-2 py-0.5 rounded text-yellow-400 shrink-0" x-text="commit.short_sha"></code>
+            <span class="text-sm truncate" x-text="commit.message"></span>
+          </div>
+          <div class="flex items-center gap-4 shrink-0 ml-4">
+            <span class="text-xs text-gray-500" x-text="commit.author"></span>
+            <span class="text-xs text-gray-600" x-text="formatDate(commit.date)"></span>
+            <button @click="triggerBuild(selectedRepo, commit)"
+              class="bg-green-700 hover:bg-green-600 px-3 py-1 rounded-lg text-xs font-medium transition-colors shadow-sm"
+              x-text="t('btn_build')">
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ENV VARS PANEL ======================== -->
+<div x-show="currentTab === 'repos' && selectedEnvRepo" x-cloak class="mt-4">
+  <div class="bg-gray-900 border border-indigo-900/60 rounded-xl shadow-md ring-1 ring-white/5">
+    <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+      <h3 class="font-medium">
+        <span x-text="t('heading_env_vars')"></span> —
+        <span class="text-indigo-400" x-text="selectedEnvRepo?.name"></span>
+      </h3>
+      <div class="flex items-center gap-2">
+        <button @click="showPasteArea = !showPasteArea; pasteContent = ''"
+          :class="showPasteArea ? 'bg-indigo-700 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'"
+          class="text-xs px-3 py-1.5 rounded-lg transition-colors"
+          x-text="t('btn_paste_env')">
+        </button>
+        <button @click="exportEnvFile()" x-show="envVars.length > 0"
+          class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white transition-colors"
+          x-text="t('btn_export_env')">
+        </button>
+        <button @click="selectedEnvRepo = null; envVars = []; showPasteArea = false; editingEnvId = null"
+          class="text-gray-500 hover:text-white ml-1 transition-colors">✕</button>
+      </div>
+    </div>
+
+    <!-- Paste import area -->
+    <div x-show="showPasteArea" x-cloak class="px-5 py-3 border-b border-gray-800">
+      <textarea x-model="pasteContent" rows="5" :placeholder="t('paste_placeholder')"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-indigo-500 resize-y">
+      </textarea>
+      <div class="flex items-center gap-2 mt-2">
+        <button @click="bulkImportEnv()"
+          class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          x-text="t('btn_import')">
+        </button>
+        <span x-show="importMsg" x-text="importMsg" class="text-green-400 text-xs"></span>
+      </div>
+    </div>
+
+    <p class="px-5 pt-3 text-xs text-gray-500" x-text="t('env_hint')"></p>
+
+    <!-- Add form -->
+    <div class="px-5 py-3 flex gap-2 items-end">
+      <div class="flex-1">
+        <label class="block text-xs text-gray-400 mb-1" x-text="t('label_key')"></label>
+        <input x-model="newEnvKey" type="text" :placeholder="t('placeholder_key')" @keydown.enter="addEnvVar()"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-500" />
+      </div>
+      <div class="flex-1">
+        <label class="block text-xs text-gray-400 mb-1" x-text="t('label_value')"></label>
+        <input x-model="newEnvVal" type="text" :placeholder="t('placeholder_value')" @keydown.enter="addEnvVar()"
+          class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-500" />
+      </div>
+      <button @click="addEnvVar()"
+        class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm shrink-0"
+        x-text="t('btn_add')">
+      </button>
+    </div>
+
+    <!-- Env list -->
+    <div class="divide-y divide-gray-800 max-h-64 overflow-y-auto">
+      <template x-if="envVars.length === 0">
+        <div class="flex flex-col items-center justify-center py-10 text-center">
+          <div class="text-3xl mb-2 opacity-30">🔑</div>
+          <p class="text-gray-500 text-sm" x-text="t('no_env_vars')"></p>
+        </div>
+      </template>
+      <template x-for="env in envVars" :key="env.id">
+        <div class="px-5 py-2 hover:bg-gray-800/40 transition-colors">
+          <!-- View row -->
+          <div x-show="editingEnvId !== env.id" class="flex items-center justify-between">
+            <div class="flex items-center gap-3 font-mono text-sm min-w-0">
+              <span class="text-indigo-300 shrink-0" x-text="env.key"></span>
+              <span class="text-gray-600">=</span>
+              <span class="text-gray-400 truncate" x-text="env.value"></span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0 ml-3">
+              <button @click="startEditEnv(env)"
+                class="text-gray-400 hover:text-white text-xs hover:bg-gray-700 px-2 py-1 rounded-lg transition-colors"
+                x-text="t('btn_edit')">
+              </button>
+              <button @click="deleteEnvVar(env)"
+                class="text-red-400 hover:text-red-300 text-xs hover:bg-red-900/20 px-2 py-1 rounded-lg transition-colors"
+                x-text="t('btn_delete')">
+              </button>
+            </div>
+          </div>
+          <!-- Edit row -->
+          <div x-show="editingEnvId === env.id" class="flex items-center gap-2">
+            <input x-model="editingEnvKey" type="text" @keydown.enter="saveEditEnv(env)" @keydown.escape="cancelEditEnv()"
+              class="w-36 bg-gray-800 border border-indigo-600 rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:border-indigo-400 shrink-0" />
+            <span class="text-gray-600 text-sm">=</span>
+            <input x-model="editingEnvVal" type="text" @keydown.enter="saveEditEnv(env)" @keydown.escape="cancelEditEnv()"
+              class="flex-1 bg-gray-800 border border-indigo-600 rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:border-indigo-400" />
+            <button @click="saveEditEnv(env)"
+              class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded-lg transition-colors shrink-0"
+              x-text="t('btn_save_edit')">
+            </button>
+            <button @click="cancelEditEnv()"
+              class="bg-gray-700 hover:bg-gray-600 text-xs px-2.5 py-1 rounded-lg transition-colors shrink-0"
+              x-text="t('btn_cancel_edit')">
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>

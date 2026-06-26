@@ -1,0 +1,56 @@
+<div x-show="currentTab === 'images'" x-cloak>
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-xl font-semibold" x-text="t('heading_images')"></h2>
+    <button @click="loadImages()" class="text-sm text-gray-400 hover:text-white transition-colors"
+      x-text="'↻ ' + t('btn_refresh')"></button>
+  </div>
+  <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-md ring-1 ring-white/5">
+    <template x-if="images.length === 0">
+      <div class="flex flex-col items-center justify-center py-16 text-center">
+        <div class="text-4xl mb-3 opacity-30">🐳</div>
+        <p class="text-gray-500 text-sm" x-text="t('no_images')"></p>
+      </div>
+    </template>
+    <template x-if="images.length > 0">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800 text-gray-500 text-xs uppercase">
+            <th class="text-left px-4 py-3 w-56" x-text="t('col_tags')"></th>
+            <th class="text-left px-4 py-3 w-28">ID</th>
+            <th class="text-left px-4 py-3 w-20" x-text="t('col_size')"></th>
+            <th class="text-left px-4 py-3 w-36" x-text="t('col_created')"></th>
+            <th class="px-4 py-3 w-px"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-800">
+          <template x-for="img in images" :key="img.id">
+            <tr class="hover:bg-gray-800/40 transition-colors">
+              <td class="px-4 py-3 max-w-0 w-56">
+                <div class="flex flex-wrap gap-1 overflow-hidden max-h-12">
+                  <template x-for="tag in img.tags" :key="tag">
+                    <span class="bg-blue-900/50 text-blue-300 text-xs px-2 py-0.5 rounded-full truncate max-w-full" x-text="tag"></span>
+                  </template>
+                </div>
+              </td>
+              <td class="px-4 py-3 font-mono text-xs text-gray-400 w-28" x-text="img.id"></td>
+              <td class="px-4 py-3 text-gray-400 w-20" x-text="`${img.size_mb} MB`"></td>
+              <td class="px-4 py-3 text-gray-500 text-xs w-36" x-text="formatDate(img.created)"></td>
+              <td class="px-4 py-3 w-px whitespace-nowrap text-right">
+                <div class="flex justify-end gap-1">
+                  <button @click="runImage(img)"
+                    class="text-xs bg-green-800/60 hover:bg-green-700/70 text-green-400 px-2 py-1 rounded-lg transition-colors"
+                    x-text="t('btn_run')">
+                  </button>
+                  <button @click="deleteImage(img.id)"
+                    class="btn-danger btn-sm"
+                    x-text="t('btn_remove')">
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </template>
+  </div>
+</div>
