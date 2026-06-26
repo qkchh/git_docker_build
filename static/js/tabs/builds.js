@@ -27,7 +27,7 @@ export function buildsData() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repo_id: repo.id, commit_sha: commit.sha, commit_message: commit.message }),
       })
-      if (!r.ok) { alert(this.t('err_create_build')); return }
+      if (!r.ok) { this.showToast(this.t('err_create_build')); return }
       const build = await r.json()
       this.currentTab = 'builds'
       this.activeBuild = build

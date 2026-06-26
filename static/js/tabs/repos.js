@@ -58,10 +58,11 @@ export function reposData() {
     },
 
     async deleteRepo(id) {
-      if (!confirm(this.t('confirm_delete_repo'))) return
-      await this.apiFetch(`/api/repos/${id}`, { method: 'DELETE' })
-      if (this.selectedRepo?.id === id) { this.selectedRepo = null; this.commits = [] }
-      await this.loadRepos()
+      this.showConfirm(this.t('confirm_delete_repo'), async () => {
+        await this.apiFetch(`/api/repos/${id}`, { method: 'DELETE' })
+        if (this.selectedRepo?.id === id) { this.selectedRepo = null; this.commits = [] }
+        await this.loadRepos()
+      })
     },
 
     // ================================================================
@@ -78,7 +79,7 @@ export function reposData() {
       try {
         const r = await this.apiFetch(`/api/repos/${repo.id}/commits`)
         if (r.ok) this.commits = await r.json()
-        else { const err = await r.json(); alert(err.detail || this.t('err_load_commits')) }
+        else { const err = await r.json(); this.showToast(err.detail || this.t('err_load_commits')) }
       } finally {
         this.loadingCommits = false
       }
@@ -108,7 +109,7 @@ export function reposData() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value: this.newEnvVal }),
       })
-      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
       this.newEnvKey = ''; this.newEnvVal = ''
       await this.loadEnvVars(this.selectedEnvRepo)
     },
@@ -138,7 +139,7 @@ export function reposData() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value: this.editingEnvVal }),
       })
-      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
       this.cancelEditEnv()
       await this.loadEnvVars(this.selectedEnvRepo)
     },
@@ -151,7 +152,7 @@ export function reposData() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
       })
-      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
       const { imported } = await r.json()
       this.pasteContent = ''; this.showPasteArea = false
       this.importMsg = `${this.t('import_success')} ${imported} ${this.t('import_unit')}`

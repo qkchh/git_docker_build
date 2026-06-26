@@ -11,7 +11,8 @@
     .log-box { font-family: 'Menlo', 'Monaco', monospace; font-size: 12px; }
     .btn-primary   { @apply bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm; }
     .btn-secondary { @apply bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
-    .btn-danger    { @apply text-red-400 hover:text-red-300 hover:bg-red-900/20 px-3 py-1.5 rounded-lg text-sm transition-colors; }
+    .btn-danger      { @apply text-red-400 hover:text-red-300 hover:bg-red-900/20 px-3 py-1.5 rounded-lg text-sm transition-colors; }
+    .btn-danger-solid { @apply bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm; }
     .btn-sm        { @apply !px-3 !py-1.5 !text-xs; }
   </style>
 </head>
@@ -29,6 +30,8 @@
 
   <div data-template="/static/templates/modal-log.html"></div>
   <div data-template="/static/templates/modal-container-log.html"></div>
+  <div data-template="/static/templates/modal-confirm.html"></div>
+  <div data-template="/static/templates/modal-toast.html"></div>
 
 </body>
 </html>

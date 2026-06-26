@@ -11,7 +11,7 @@ export function containersData() {
 
     async viewContainerLogs(c) {
       const r = await this.apiFetch(`/api/containers/${c.id}/logs`)
-      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+      if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
       const { logs } = await r.json()
       this.containerLogModal = { id: c.id, name: c.name, logs: logs || this.t('no_container_logs') }
     },
@@ -21,7 +21,7 @@ export function containersData() {
       this.containerLogsRefreshing = true
       try {
         const r = await this.apiFetch(`/api/containers/${this.containerLogModal.id}/logs`)
-        if (!r.ok) { const e = await r.json(); alert(e.detail); return }
+        if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
         const { logs } = await r.json()
         this.containerLogModal = { ...this.containerLogModal, logs: logs || this.t('no_container_logs') }
       } finally {
@@ -30,14 +30,20 @@ export function containersData() {
     },
 
     async containerAction(id, action) {
-      if (action === 'remove' && !confirm(this.t('confirm_remove_container'))) return
-      const r = await this.apiFetch(`/api/containers/${id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      })
-      if (!r.ok) { const e = await r.json(); alert(e.detail); return }
-      await this.loadContainers()
+      const doAction = async () => {
+        const r = await this.apiFetch(`/api/containers/${id}/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action }),
+        })
+        if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
+        await this.loadContainers()
+      }
+      if (action === 'remove') {
+        this.showConfirm(this.t('confirm_remove_container'), doAction)
+      } else {
+        await doAction()
+      }
     },
   }
 }

@@ -85,6 +85,7 @@ export function i18nData() {
         btn_save_edit:        '保存',
         btn_cancel_edit:      '取消',
 
+        btn_confirm_ok:            '确定',
         confirm_delete_repo:       '确定要删除该仓库吗？',
         confirm_remove_image:      '确定要删除该镜像吗？',
         confirm_remove_container:  '确定要删除该容器吗？',
@@ -175,6 +176,7 @@ export function i18nData() {
         btn_save_edit:        'Save',
         btn_cancel_edit:      'Cancel',
 
+        btn_confirm_ok:            'Confirm',
         confirm_delete_repo:       'Delete this repository?',
         confirm_remove_image:      'Remove this image?',
         confirm_remove_container:  'Remove this container?',

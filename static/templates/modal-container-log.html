@@ -1,6 +1,6 @@
 <div x-show="containerLogModal" x-cloak
-  class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-  @click.self="containerLogModal = null">
+  x-init="$watch('containerLogModal', v => { if (v) $nextTick(() => { if ($refs.containerLogScroll) $refs.containerLogScroll.scrollTop = $refs.containerLogScroll.scrollHeight }) })"
+  class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
   <div class="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col shadow-2xl ring-1 ring-white/5">
     <div class="px-5 py-3 border-b border-gray-800 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-3">
@@ -23,7 +23,7 @@
         <button @click="containerLogModal = null" class="text-gray-500 hover:text-white transition-colors">✕</button>
       </div>
     </div>
-    <div class="log-box bg-gray-950 p-4 overflow-y-auto flex-1 whitespace-pre-wrap text-gray-300 text-xs"
+    <div x-ref="containerLogScroll" class="log-box bg-gray-950 p-4 overflow-y-auto flex-1 whitespace-pre-wrap text-gray-300 text-xs"
       x-text="containerLogModal?.logs"></div>
   </div>
 </div>
