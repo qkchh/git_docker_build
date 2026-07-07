@@ -21,7 +21,7 @@ def _repo_dir_name(repo) -> str:
     return name or f"repo-{repo.id}"
 
 
-def _get_or_clone(repo) -> Path:
+def _get_or_clone(repo, *, fetch: bool = True) -> Path:
     """Clone repo to workspace/, or fetch latest if already exists.
 
     Works for both remote (git_url) and local (local_path) repos.
@@ -44,10 +44,11 @@ def _get_or_clone(repo) -> Path:
     with _repo_lock(repo.id):
         if repo_dir.exists():
             r = git.Repo(repo_dir)
-            try:
-                r.git.fetch("origin", "--tags", "--prune")
-            except Exception:
-                pass  # local source may have no network; best-effort
+            if fetch:
+                try:
+                    r.git.fetch("origin", "--tags", "--prune")
+                except Exception:
+                    pass  # local source may have no network; best-effort
         else:
             git.Repo.clone_from(clone_url, repo_dir)
     return repo_dir
@@ -55,7 +56,7 @@ def _get_or_clone(repo) -> Path:
 
 def get_repo_path(repo, *, fetch: bool = False) -> Path:
     """Return the workspace clone path for any repo (remote or local)."""
-    return _get_or_clone(repo)
+    return _get_or_clone(repo, fetch=fetch)
 
 
 def checkout_commit(repo_path: Path, commit_sha: str) -> None:
@@ -66,7 +67,7 @@ def checkout_commit(repo_path: Path, commit_sha: str) -> None:
 
 def prepare_build_path(repo, build_id: int, commit_sha: str) -> Path:
     """Checkout the requested commit in the project's named workspace."""
-    repo_path = _get_or_clone(repo)
+    repo_path = _get_or_clone(repo, fetch=True)
     with _repo_lock(repo.id):
         source = git.Repo(repo_path)
         try:

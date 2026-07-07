@@ -105,22 +105,30 @@
         <span class="text-blue-400" x-text="selectedRepo?.name"></span>
       </h3>
       <div class="flex items-center gap-3">
+        <select x-model="selectedBranch"
+          class="bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-blue-500 max-w-48"
+          :aria-label="t('filter_branch')">
+          <option value="" x-text="t('all_branches')"></option>
+          <template x-for="branch in repoBranches" :key="branch">
+            <option :value="branch" x-text="branch"></option>
+          </template>
+        </select>
         <button @click="loadCommits(selectedRepo)" class="text-xs text-gray-400 hover:text-white transition-colors"
           x-text="'↻ ' + t('btn_refresh')"></button>
-        <button @click="selectedRepo = null; commits = []" class="text-gray-500 hover:text-white transition-colors">✕</button>
+        <button @click="selectedRepo = null; commits = []; repoBranches = []; selectedBranch = ''" class="text-gray-500 hover:text-white transition-colors">✕</button>
       </div>
     </div>
 
     <div x-show="loadingCommits" class="py-8 text-center text-gray-500 text-sm" x-text="t('loading_commits')"></div>
 
     <div x-show="!loadingCommits" class="divide-y divide-gray-800 max-h-96 overflow-y-auto">
-      <template x-if="commits.length === 0">
+      <template x-if="visibleCommits().length === 0">
         <div class="flex flex-col items-center justify-center py-10 text-center">
           <div class="text-3xl mb-2 opacity-30">📝</div>
           <p class="text-gray-500 text-sm" x-text="t('no_commits')"></p>
         </div>
       </template>
-      <template x-for="commit in commits" :key="commit.sha">
+      <template x-for="commit in visibleCommits()" :key="commit.sha">
         <div class="px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-800/50 transition-colors">
           <div class="flex items-center gap-3 min-w-0">
             <code class="text-xs bg-gray-800 px-2 py-0.5 rounded text-yellow-400 shrink-0" x-text="commit.short_sha"></code>

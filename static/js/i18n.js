@@ -27,6 +27,8 @@ export function i18nData() {
         btn_delete:           '删除',
 
         heading_commits:      '提交记录',
+        filter_branch:        '筛选分支',
+        all_branches:         '全部分支',
         btn_refresh:          '刷新',
         loading_commits:      '加载中...',
         no_commits:           '暂无提交记录',
@@ -118,6 +120,8 @@ export function i18nData() {
         btn_delete:           'Delete',
 
         heading_commits:      'Commits',
+        filter_branch:        'Filter branch',
+        all_branches:         'All branches',
         btn_refresh:          'Refresh',
         loading_commits:      'Loading commits...',
         no_commits:           'No commits found.',

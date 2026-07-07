@@ -9,6 +9,8 @@ export function reposData() {
     // Commits panel state
     selectedRepo: null,
     commits: [],
+    repoBranches: [],
+    selectedBranch: '',
     loadingCommits: false,
 
     // Env vars panel state
@@ -70,16 +72,26 @@ export function reposData() {
     // ================================================================
     async openRepo(repo) {
       this.selectedRepo = repo
+      this.selectedBranch = ''
       await this.loadCommits(repo)
+    },
+
+    visibleCommits() {
+      if (!this.selectedBranch) return this.commits
+      return this.commits.filter(commit => (commit.branches || []).includes(this.selectedBranch))
     },
 
     async loadCommits(repo) {
       this.loadingCommits = true
       this.commits = []
       try {
-        const r = await this.apiFetch(`/api/repos/${repo.id}/commits`)
-        if (r.ok) this.commits = await r.json()
-        else { const err = await r.json(); this.showToast(err.detail || this.t('err_load_commits')) }
+        const [commitsResponse, branchesResponse] = await Promise.all([
+          this.apiFetch(`/api/repos/${repo.id}/commits`),
+          this.apiFetch(`/api/repos/${repo.id}/branches`),
+        ])
+        if (commitsResponse.ok) this.commits = await commitsResponse.json()
+        else { const err = await commitsResponse.json(); this.showToast(err.detail || this.t('err_load_commits')) }
+        if (branchesResponse.ok) this.repoBranches = await branchesResponse.json()
       } finally {
         this.loadingCommits = false
       }

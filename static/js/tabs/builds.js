@@ -80,6 +80,16 @@ export function buildsData() {
       if (r.ok) this.builds = await r.json()
     },
 
-    showBuildLog(build) { this.logModal = build },
+    scrollBuildLogToBottom() {
+      this.$nextTick(() => requestAnimationFrame(() => {
+        const box = this.$refs.buildLogScroll
+        if (box) box.scrollTop = box.scrollHeight
+      }))
+    },
+
+    showBuildLog(build) {
+      this.logModal = build
+      this.scrollBuildLogToBottom()
+    },
   }
 }

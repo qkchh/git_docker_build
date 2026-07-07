@@ -14,6 +14,7 @@ export function containersData() {
       if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
       const { logs } = await r.json()
       this.containerLogModal = { id: c.id, name: c.name, logs: logs || this.t('no_container_logs') }
+      this.scrollContainerLogToBottom()
     },
 
     async refreshContainerLogs() {
@@ -24,9 +25,17 @@ export function containersData() {
         if (!r.ok) { const e = await r.json(); this.showToast(e.detail); return }
         const { logs } = await r.json()
         this.containerLogModal = { ...this.containerLogModal, logs: logs || this.t('no_container_logs') }
+        this.scrollContainerLogToBottom()
       } finally {
         this.containerLogsRefreshing = false
       }
+    },
+
+    scrollContainerLogToBottom() {
+      this.$nextTick(() => requestAnimationFrame(() => {
+        const box = this.$refs.containerLogScroll
+        if (box) box.scrollTop = box.scrollHeight
+      }))
     },
 
     async containerAction(id, action) {
