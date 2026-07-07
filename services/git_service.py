@@ -6,7 +6,6 @@ from pathlib import Path
 import git
 
 WORKSPACE_DIR = Path("workspace")
-BUILD_WORKSPACE_DIR = WORKSPACE_DIR / "builds"
 _repo_locks: dict[int, threading.Lock] = {}
 _locks_guard = threading.Lock()
 
@@ -19,7 +18,7 @@ def _repo_lock(repo_id: int) -> threading.Lock:
 def _repo_dir_name(repo) -> str:
     """Sanitize repo name for use as a directory name."""
     name = re.sub(r"[^a-z0-9]+", "-", repo.name.lower()).strip("-")
-    return f"{repo.id}-{name or 'repo'}"
+    return name or f"repo-{repo.id}"
 
 
 def _get_or_clone(repo) -> Path:
@@ -29,14 +28,13 @@ def _get_or_clone(repo) -> Path:
     Local repos are cloned from their local_path; 'origin' then points
     back to that path so subsequent fetches pick up new commits.
     """
-    repo_dir = WORKSPACE_DIR / "repos" / _repo_dir_name(repo)
+    repo_dir = WORKSPACE_DIR / _repo_dir_name(repo)
 
     # Migrate from the two layouts used by earlier versions.
     old_dir = WORKSPACE_DIR / str(repo.id)
-    legacy_slug = re.sub(r"[^a-z0-9]+", "-", repo.name.lower()).strip("-")
-    legacy_name_dir = WORKSPACE_DIR / legacy_slug if legacy_slug else None
-    repo_dir.parent.mkdir(parents=True, exist_ok=True)
-    for legacy_dir in (old_dir, legacy_name_dir):
+    newer_slug = re.sub(r"[^a-z0-9]+", "-", repo.name.lower()).strip("-") or "repo"
+    newer_layout_dir = WORKSPACE_DIR / "repos" / f"{repo.id}-{newer_slug}"
+    for legacy_dir in (old_dir, newer_layout_dir):
         if legacy_dir and legacy_dir.exists() and not repo_dir.exists():
             legacy_dir.rename(repo_dir)
             break
@@ -67,48 +65,27 @@ def checkout_commit(repo_path: Path, commit_sha: str) -> None:
 
 
 def prepare_build_path(repo, build_id: int, commit_sha: str) -> Path:
-    """Create one detached worktree per build so concurrent builds cannot clash."""
+    """Checkout the requested commit in the project's named workspace."""
     repo_path = _get_or_clone(repo)
-    build_path = BUILD_WORKSPACE_DIR / str(build_id)
-    BUILD_WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
-
     with _repo_lock(repo.id):
         source = git.Repo(repo_path)
         try:
             commit = source.commit(commit_sha)
         except Exception as exc:
             raise ValueError(f"Unknown commit: {commit_sha}") from exc
-
-        if build_path.exists():
-            try:
-                existing = git.Repo(build_path)
-                if existing.head.commit.hexsha == commit.hexsha:
-                    return build_path
-            except Exception:
-                pass
-            try:
-                source.git.worktree("remove", "--force", str(build_path.resolve()))
-            except Exception:
-                pass
-            shutil.rmtree(build_path, ignore_errors=True)
-
-        source.git.worktree("prune")
-        source.git.worktree("add", "--detach", str(build_path.resolve()), commit.hexsha)
-    return build_path
-
-
-def get_build_path(build_id: int) -> Path:
-    return BUILD_WORKSPACE_DIR / str(build_id)
+        source.git.checkout("--force", commit.hexsha)
+    return repo_path
 
 
 def delete_repo_workspace(repo) -> None:
     """Remove the repository cache. Build worktrees are removed by build id separately."""
-    repo_path = WORKSPACE_DIR / "repos" / _repo_dir_name(repo)
+    repo_path = WORKSPACE_DIR / _repo_dir_name(repo)
     shutil.rmtree(repo_path, ignore_errors=True)
 
 
 def delete_build_workspace(build_id: int) -> None:
-    shutil.rmtree(get_build_path(build_id), ignore_errors=True)
+    # Builds share the repository workspace; deleting one build must not remove it.
+    return None
 
 
 def get_commits(repo_path: Path, limit: int = 50) -> list[dict]:

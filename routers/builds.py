@@ -126,7 +126,7 @@ def stream_build(build_id: int):
                 session.commit()
 
             try:
-                # Step 1 — create an isolated worktree for this build.
+                # Step 1 — checkout this commit in the project's workspace.
                 yield _sse("[INFO] Resolving repository...")
                 yield _sse(f"[INFO] Checking out commit {build.commit_sha[:8]}...")
                 build_root = git_service.prepare_build_path(repo, build.id, build.commit_sha)
@@ -224,12 +224,10 @@ def run_build(build_id: int, session: Session = Depends(get_session)):
     repo = session.get(Repository, build.repo_id)
     if not repo:
         raise HTTPException(status_code=404, detail="Repo not found")
-    build_root = git_service.get_build_path(build.id)
-    if not build_root.exists():
-        try:
-            build_root = git_service.prepare_build_path(repo, build.id, build.commit_sha)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    try:
+        build_root = git_service.prepare_build_path(repo, build.id, build.commit_sha)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     try:
         build_dir = _validated_build_dir(build_root, repo.build_context)
     except ValueError as e:

@@ -42,8 +42,8 @@ class EnvironmentFileTests(unittest.TestCase):
             self.assertEqual(env_file.read_text(), "OWNED=true\n")
 
 
-class GitWorktreeTests(unittest.TestCase):
-    def test_each_build_gets_an_isolated_commit(self):
+class GitWorkspaceTests(unittest.TestCase):
+    def test_builds_reuse_project_named_workspace(self):
         with tempfile.TemporaryDirectory() as temp:
             temp_path = Path(temp)
             source_path = temp_path / "source"
@@ -60,19 +60,17 @@ class GitWorktreeTests(unittest.TestCase):
             second = source.index.commit("second").hexsha
 
             old_workspace = git_service.WORKSPACE_DIR
-            old_build_workspace = git_service.BUILD_WORKSPACE_DIR
             git_service.WORKSPACE_DIR = temp_path / "workspace"
-            git_service.BUILD_WORKSPACE_DIR = git_service.WORKSPACE_DIR / "builds"
             try:
                 repo = Repository(id=42, name="same-name", source_type="local", local_path=str(source_path))
                 first_path = git_service.prepare_build_path(repo, 101, first)
-                second_path = git_service.prepare_build_path(repo, 102, second)
-                self.assertNotEqual(first_path, second_path)
+                self.assertEqual(first_path.name, "same-name")
                 self.assertEqual((first_path / "version.txt").read_text(), "one")
+                second_path = git_service.prepare_build_path(repo, 102, second)
+                self.assertEqual(first_path, second_path)
                 self.assertEqual((second_path / "version.txt").read_text(), "two")
             finally:
                 git_service.WORKSPACE_DIR = old_workspace
-                git_service.BUILD_WORKSPACE_DIR = old_build_workspace
 
     def test_commit_list_contains_branch_membership(self):
         with tempfile.TemporaryDirectory() as temp:
