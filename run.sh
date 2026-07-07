@@ -42,12 +42,17 @@ echo "Installing dependencies..."
 pip install -q --no-cache-dir -r requirements.txt
 echo "Dependencies ready."
 
-# ── Kill anything on port $PORT ───────────────────────
+# ── Refuse to kill unrelated processes on our port ────
 EXISTING=$(lsof -ti tcp:$PORT 2>/dev/null || true)
 if [ -n "$EXISTING" ]; then
-  echo "Port $PORT in use (pid $EXISTING), killing..."
-  kill -9 $EXISTING 2>/dev/null || true
-  sleep 0.5
+  if [ -f "$PID_FILE" ] && [ "$(cat "$PID_FILE")" = "$EXISTING" ]; then
+    echo "Stopping previous service (pid $EXISTING)..."
+    kill "$EXISTING" 2>/dev/null || true
+    sleep 1
+  else
+    echo "ERROR: Port $PORT is already used by another process (pid $EXISTING)."
+    exit 1
+  fi
 fi
 rm -f "$PID_FILE"
 

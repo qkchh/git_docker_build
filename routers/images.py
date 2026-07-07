@@ -54,6 +54,7 @@ def run_image(image_id: str):
 @router.get("/containers/{container_id}/logs")
 def container_logs(container_id: str, lines: int = 200):
     try:
+        lines = max(1, min(lines, 5000))
         logs = docker_service.get_container_logs(container_id, lines)
         return {"logs": logs}
     except Exception as e:

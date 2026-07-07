@@ -1,5 +1,6 @@
 import subprocess
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
 
@@ -8,6 +9,25 @@ from python_on_whales import DockerClient, docker
 
 class BuildCancelled(Exception):
     """Raised when a build is cancelled by the user."""
+
+
+@contextmanager
+def _temporary_env_file(build_dir: Path, env_vars: dict[str, str] | None):
+    """Temporarily provide .env without destroying a repository-owned file."""
+    env_file = build_dir / ".env"
+    previous = env_file.read_bytes() if env_file.exists() else None
+    try:
+        if env_vars:
+            with env_file.open("w", encoding="utf-8", newline="\n") as handle:
+                for key, value in env_vars.items():
+                    safe_value = value.replace("\n", "\\n").replace("\r", "")
+                    handle.write(f"{key}={safe_value}\n")
+        yield
+    finally:
+        if previous is None:
+            env_file.unlink(missing_ok=True)
+        else:
+            env_file.write_bytes(previous)
 
 
 def _kill_on_cancel(cancel_event: threading.Event, proc: subprocess.Popen) -> None:
@@ -33,44 +53,45 @@ def build_image(
     - Written to build_dir/.env  (for COPY .env or docker-compose)
     - Passed as --build-arg      (for ARG instructions in Dockerfile)
     """
-    if env_vars:
-        with open(build_dir / ".env", "w") as f:
-            for k, v in env_vars.items():
-                f.write(f"{k}={v}\n")
-
     cmd = ["docker", "build", "--progress=plain", "-t", image_name]
     for k, v in (env_vars or {}).items():
         cmd += ["--build-arg", f"{k}={v}"]
     cmd.append(str(build_dir.resolve()))
 
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-    )
+    with _temporary_env_file(build_dir, env_vars):
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
 
-    if cancel_event:
-        threading.Thread(target=_kill_on_cancel, args=(cancel_event, proc), daemon=True).start()
+        if cancel_event:
+            threading.Thread(target=_kill_on_cancel, args=(cancel_event, proc), daemon=True).start()
 
-    try:
-        for line in proc.stdout:
-            line = line.rstrip()
-            if line:
-                yield line
-        proc.wait()
-        if cancel_event and cancel_event.is_set():
-            raise BuildCancelled()
-        if proc.returncode != 0:
-            raise RuntimeError(f"docker build exited with code {proc.returncode}")
-    except BuildCancelled:
-        raise
-    except Exception:
-        if proc.poll() is None:
-            proc.kill()
+        try:
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    yield line
             proc.wait()
-        raise
+            if cancel_event and cancel_event.is_set():
+                raise BuildCancelled()
+            if proc.returncode != 0:
+                raise RuntimeError(f"docker build exited with code {proc.returncode}")
+        except BuildCancelled:
+            raise
+        except GeneratorExit:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+            raise
+        except Exception:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+            raise
 
 
 def compose_build(
@@ -79,43 +100,44 @@ def compose_build(
     cancel_event: threading.Event | None = None,
 ) -> Generator[str, None, None]:
     """Stream docker compose build output line by line."""
-    if env_vars:
-        with open(build_dir / ".env", "w") as f:
-            for k, v in env_vars.items():
-                f.write(f"{k}={v}\n")
-
     # --progress is a global docker compose flag; cwd lets compose find the file automatically
     cmd = ["docker", "compose", "--progress", "plain", "build"]
 
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-        cwd=str(build_dir.resolve()),
-    )
+    with _temporary_env_file(build_dir, env_vars):
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            cwd=str(build_dir.resolve()),
+        )
 
-    if cancel_event:
-        threading.Thread(target=_kill_on_cancel, args=(cancel_event, proc), daemon=True).start()
+        if cancel_event:
+            threading.Thread(target=_kill_on_cancel, args=(cancel_event, proc), daemon=True).start()
 
-    try:
-        for line in proc.stdout:
-            line = line.rstrip()
-            if line:
-                yield line
-        proc.wait()
-        if cancel_event and cancel_event.is_set():
-            raise BuildCancelled()
-        if proc.returncode != 0:
-            raise RuntimeError(f"docker compose build exited with code {proc.returncode}")
-    except BuildCancelled:
-        raise
-    except Exception:
-        if proc.poll() is None:
-            proc.kill()
+        try:
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    yield line
             proc.wait()
-        raise
+            if cancel_event and cancel_event.is_set():
+                raise BuildCancelled()
+            if proc.returncode != 0:
+                raise RuntimeError(f"docker compose build exited with code {proc.returncode}")
+        except BuildCancelled:
+            raise
+        except GeneratorExit:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+            raise
+        except Exception:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+            raise
 
 
 def run_image(image_name: str, container_name: str) -> str:
@@ -143,12 +165,9 @@ def compose_up(build_dir: Path, env_vars: dict | None = None) -> None:
         if (build_dir / "docker-compose.yml").exists()
         else build_dir / "docker-compose.yaml"
     )
-    if env_vars:
-        with open(build_dir / ".env", "w") as f:
-            for k, v in env_vars.items():
-                f.write(f"{k}={v}\n")
-    client = DockerClient(compose_files=[str(compose_file)])
-    client.compose.up(detach=True, stream_logs=False)
+    with _temporary_env_file(build_dir, env_vars):
+        client = DockerClient(compose_files=[str(compose_file)])
+        client.compose.up(detach=True, stream_logs=False)
 
 
 def run_image_by_tag(image_tag: str) -> str:

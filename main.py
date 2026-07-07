@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from database import create_db
+from database import create_db, recover_interrupted_builds
 from routers import builds, images, repos
 
 app = FastAPI(title="Git Docker Build")
@@ -30,6 +30,7 @@ def _load_or_create_token() -> str:
 def on_startup():
     global ACCESS_TOKEN
     create_db()
+    recover_interrupted_builds()
     ACCESS_TOKEN = _load_or_create_token()
     print("\n" + "=" * 52, flush=True)
     print(f"  Access Token: {ACCESS_TOKEN}", flush=True)
@@ -41,8 +42,8 @@ async def auth_middleware(request: Request, call_next):
     path = request.url.path
     if path == "/" or path.startswith("/static/") or path == "/api/auth/verify":
         return await call_next(request)
-    token = request.headers.get("X-Access-Token") or request.query_params.get("token")
-    if token != ACCESS_TOKEN:
+    token = request.headers.get("X-Access-Token", "")
+    if not secrets.compare_digest(token, ACCESS_TOKEN):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
     return await call_next(request)
 
@@ -54,7 +55,7 @@ auth_router = APIRouter(prefix="/api/auth")
 @auth_router.post("/verify")
 async def verify_token(request: Request):
     data = await request.json()
-    if data.get("token") == ACCESS_TOKEN:
+    if secrets.compare_digest(str(data.get("token", "")), ACCESS_TOKEN):
         return {"ok": True}
     return JSONResponse(status_code=401, content={"detail": "Invalid token"})
 

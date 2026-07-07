@@ -37,24 +37,42 @@ export function buildsData() {
     },
 
     async streamBuild(build) {
-      // EventSource doesn't support custom headers — pass token as query param
-      const es = new EventSource(`/api/builds/${build.id}/stream?token=${encodeURIComponent(this.token)}`)
-      es.onmessage = (e) => {
-        const line = JSON.parse(e.data)
+      // fetch supports the auth header, so the token never appears in URLs or access logs.
+      const response = await this.apiFetch(`/api/builds/${build.id}/stream`)
+      if (!response.ok || !response.body) {
+        this.showToast(this.t('err_create_build'))
+        return
+      }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      const appendLine = (line) => {
         this.buildLog.push(line)
         this.$nextTick(() => {
           const box = this.$refs.logBox
           if (box) box.scrollTop = box.scrollHeight
         })
         if (line === '[DONE] All done') {
-          this.activeBuild = { ...this.activeBuild, status: 'success' }; es.close()
+          this.activeBuild = { ...this.activeBuild, status: 'success' }
         } else if (line.startsWith('[ERROR]')) {
-          this.activeBuild = { ...this.activeBuild, status: 'failed' }; es.close()
+          this.activeBuild = { ...this.activeBuild, status: 'failed' }
         } else if (line.startsWith('[CANCELLED]')) {
-          this.activeBuild = { ...this.activeBuild, status: 'cancelled' }; es.close()
+          this.activeBuild = { ...this.activeBuild, status: 'cancelled' }
         }
       }
-      es.onerror = () => es.close()
+
+      while (true) {
+        const { value, done } = await reader.read()
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done })
+        const messages = buffer.split('\n\n')
+        buffer = messages.pop() || ''
+        for (const message of messages) {
+          const data = message.split('\n').find(line => line.startsWith('data: '))
+          if (data) appendLine(JSON.parse(data.slice(6)))
+        }
+        if (done) break
+      }
     },
 
     async loadBuilds() {
