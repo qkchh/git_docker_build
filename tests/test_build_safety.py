@@ -74,6 +74,22 @@ class GitWorktreeTests(unittest.TestCase):
                 git_service.WORKSPACE_DIR = old_workspace
                 git_service.BUILD_WORKSPACE_DIR = old_build_workspace
 
+    def test_commit_list_contains_branch_membership(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo_path = Path(temp) / "source"
+            repo = git.Repo.init(repo_path)
+            repo.git.config("user.email", "test@example.com")
+            repo.git.config("user.name", "Test")
+            (repo_path / "file.txt").write_text("base")
+            repo.index.add(["file.txt"])
+            base_sha = repo.index.commit("base").hexsha
+            repo.create_head("feature")
+
+            commits = git_service.get_commits(repo_path)
+            base = next(item for item in commits if item["sha"] == base_sha)
+            self.assertIn("feature", base["branches"])
+            self.assertIn(repo.active_branch.name, base["branches"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -115,6 +115,14 @@ def get_commits(repo_path: Path, limit: int = 50) -> list[dict]:
     r = git.Repo(repo_path)
     commits = []
     for commit in r.iter_commits("--all", max_count=limit, date_order=True):
+        branches = []
+        for ref in r.git.branch("--all", "--contains", commit.hexsha).splitlines():
+            name = ref.strip().lstrip("* ")
+            if " -> " in name or name.endswith("/HEAD"):
+                continue
+            name = name.removeprefix("remotes/").removeprefix("origin/")
+            if name and name not in branches:
+                branches.append(name)
         commits.append(
             {
                 "sha": commit.hexsha,
@@ -122,7 +130,8 @@ def get_commits(repo_path: Path, limit: int = 50) -> list[dict]:
                 "message": commit.message.strip().split("\n")[0],
                 "author": commit.author.name,
                 "date": commit.committed_datetime.isoformat(),
-                "branch": None,
+                "branch": branches[0] if branches else None,
+                "branches": branches,
             }
         )
     return commits
