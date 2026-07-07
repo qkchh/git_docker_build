@@ -1,19 +1,36 @@
-<header x-show="isAuthenticated" x-cloak class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center gap-4">
-  <span class="text-lg font-bold tracking-tight">Git Docker Build</span>
-  <nav class="flex gap-1 ml-4">
+<header x-show="isAuthenticated" x-cloak class="app-sidebar">
+  <div class="flex items-center gap-3 px-2 mb-9">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8.5 12 6l5 2.5v7L12 18l-5-2.5v-7Z"/><path d="m7 8.5 5 2.5 5-2.5M12 11v7"/></svg>
+    </div>
+    <div class="sidebar-copy min-w-0">
+      <div class="font-bold tracking-tight text-[15px]">Git Docker</div>
+      <div class="brand-subtitle text-[10px] uppercase tracking-[.2em] text-gray-600 mt-0.5">Build Console</div>
+    </div>
+  </div>
+  <div class="sidebar-copy px-3 mb-3 text-[10px] font-bold uppercase tracking-[.16em] text-gray-600" x-text="lang === 'zh' ? '工作空间' : 'Workspace'"></div>
+  <nav class="sidebar-nav flex flex-col gap-1">
     <template x-for="tab in tabs" :key="tab.id">
       <button
         @click="currentTab = tab.id"
-        :class="currentTab === tab.id
-          ? 'bg-blue-600 text-white'
-          : 'text-gray-400 hover:text-white hover:bg-gray-800'"
-        class="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
-        x-text="t('tab_' + tab.id)">
+        :class="currentTab === tab.id ? 'nav-item-active' : ''"
+        class="nav-item flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left">
+        <svg x-show="tab.id === 'repos'" viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l2 2h5.5A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5v-10Z"/></svg>
+        <svg x-show="tab.id === 'builds'" viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.5 6.5 17.5 9.5M4 20l4.5-1 9-9a2.12 2.12 0 0 0-3-3l-9 9L4 20Z"/><path d="M13 5H6a2 2 0 0 0-2 2v5"/></svg>
+        <svg x-show="tab.id === 'images'" viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+        <svg x-show="tab.id === 'containers'" viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h4M7 13h7"/></svg>
+        <span x-text="t('tab_' + tab.id)"></span>
       </button>
     </template>
   </nav>
-  <button @click="toggleLang()"
-    class="ml-auto text-xs px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
-    x-text="lang === 'zh' ? 'EN' : '中文'">
-  </button>
+  <div class="sidebar-footer mt-auto border-t border-gray-800/80 pt-4">
+    <div class="flex items-center gap-2.5 px-2 mb-4">
+      <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span></span>
+      <span class="text-xs text-gray-500" x-text="lang === 'zh' ? '本地服务已连接' : 'Local service online'"></span>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button @click="toggleLang()" class="btn-secondary btn-sm" x-text="lang === 'zh' ? 'English' : '中文'"></button>
+      <button @click="logout()" class="btn-secondary btn-sm" x-text="lang === 'zh' ? '退出' : 'Logout'"></button>
+    </div>
+  </div>
 </header>

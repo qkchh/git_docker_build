@@ -1,16 +1,18 @@
 <div x-show="!isAuthenticated" x-cloak
-  class="fixed inset-0 bg-gray-950 flex items-center justify-center z-50">
-  <div class="bg-gray-900 border border-gray-700 rounded-xl p-8 w-full max-w-sm shadow-2xl ring-1 ring-white/5">
+  class="fixed inset-0 flex items-center justify-center z-50 p-5">
+  <div class="absolute inset-0 bg-gray-950/60 backdrop-blur-xl"></div>
+  <div class="relative bg-gray-900 border border-gray-700 rounded-xl p-8 sm:p-10 w-full max-w-md shadow-2xl ring-1 ring-white/5">
     <div class="text-center mb-6">
-      <h1 class="text-lg font-bold">Git Docker Build</h1>
-      <p class="text-gray-500 text-sm mt-1" x-text="lang === 'zh' ? '请输入访问 Token' : 'Enter access token'"></p>
+      <div class="brand-mark mx-auto mb-5"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 8.5 12 6l5 2.5v7L12 18l-5-2.5v-7Z"/><path d="m7 8.5 5 2.5 5-2.5M12 11v7"/></svg></div>
+      <h1 class="text-2xl font-bold tracking-tight">Welcome back</h1>
+      <p class="text-gray-500 text-sm mt-2" x-text="lang === 'zh' ? '输入访问令牌，进入你的构建工作台' : 'Enter your access token to open the console'"></p>
     </div>
     <input
       x-model="tokenInput"
       type="password"
       :placeholder="lang === 'zh' ? 'Token' : 'Token'"
       @keydown.enter="submitToken()"
-      class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-blue-500 mb-3" />
+      class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm font-mono focus:outline-none focus:border-blue-500 mb-3" />
     <p x-show="authError" x-text="authError" class="text-red-400 text-sm mb-3"></p>
     <button @click="submitToken()"
       class="btn-primary w-full py-2.5"

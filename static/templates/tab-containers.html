@@ -1,7 +1,7 @@
 <div x-show="currentTab === 'containers'" x-cloak>
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xl font-semibold" x-text="t('heading_containers')"></h2>
-    <button @click="loadContainers()" class="text-sm text-gray-400 hover:text-white transition-colors"
+  <div class="flex items-end justify-between gap-4 mb-7">
+    <div><div class="page-kicker mb-2">Runtime</div><h2 class="text-3xl font-bold tracking-tight" x-text="t('heading_containers')"></h2><p class="text-sm text-gray-500 mt-2" x-text="lang === 'zh' ? '控制运行实例并快速查看服务日志' : 'Control running instances and inspect service logs'"></p></div>
+    <button @click="loadContainers()" class="btn-secondary btn-sm"
       x-text="'↻ ' + t('btn_refresh')"></button>
   </div>
   <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-md ring-1 ring-white/5">

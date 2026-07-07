@@ -5,23 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Git Docker Build</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css" />
   <script type="module" src="/static/js/app.js"></script>
   <style type="text/tailwindcss">
     [x-cloak] { display: none !important; }
-    .log-box { font-family: 'Menlo', 'Monaco', monospace; font-size: 12px; }
-    .btn-primary   { @apply bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm; }
-    .btn-secondary { @apply bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
-    .btn-danger      { @apply text-red-400 hover:text-red-300 hover:bg-red-900/20 px-3 py-1.5 rounded-lg text-sm transition-colors; }
-    .btn-danger-solid { @apply bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm; }
+    .log-box { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .btn-primary   { @apply bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm; }
+    .btn-secondary { @apply bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition-all border border-gray-700; }
+    .btn-danger      { @apply text-red-400 hover:text-red-300 hover:bg-red-500/10 px-3 py-1.5 rounded-lg text-sm transition-colors; }
+    .btn-danger-solid { @apply bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm; }
     .btn-sm        { @apply !px-3 !py-1.5 !text-xs; }
   </style>
 </head>
-<body class="bg-gray-950 text-gray-100 min-h-screen" style="visibility:hidden" x-data="app()" x-init="init()">
+<body class="bg-gray-950 text-gray-100 min-h-screen antialiased" style="visibility:hidden" x-data="app()" x-init="init()">
 
   <div data-template="/static/templates/login.html"></div>
   <div data-template="/static/templates/header.html"></div>
 
-  <main x-show="isAuthenticated" x-cloak class="p-6 max-w-6xl mx-auto">
+  <main x-show="isAuthenticated" x-cloak class="app-main">
     <div data-template="/static/templates/tab-repos.html"></div>
     <div data-template="/static/templates/tab-builds.html"></div>
     <div data-template="/static/templates/tab-images.html"></div>

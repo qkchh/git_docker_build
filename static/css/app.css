@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+  --bg: #080b12;
+  --surface: rgba(17, 24, 39, .72);
+  --surface-solid: #111827;
+  --line: rgba(148, 163, 184, .12);
+  --muted: #8994a7;
+  --accent: #5b8cff;
+}
+
+* { scrollbar-color: #303a4d transparent; scrollbar-width: thin; }
+html { background: var(--bg); }
+body {
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at 78% -15%, rgba(45, 91, 255, .14), transparent 34rem),
+    radial-gradient(circle at 15% 105%, rgba(91, 140, 255, .08), transparent 30rem),
+    var(--bg);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .2;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+button, input, select, textarea { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid rgba(91,140,255,.75); outline-offset: 2px; }
+code, .font-mono { font-family: "JetBrains Mono", monospace !important; }
+
+.app-sidebar {
+  position: fixed; z-index: 40; inset: 0 auto 0 0; width: 248px; padding: 22px 16px;
+  display: flex; flex-direction: column; border-right: 1px solid var(--line);
+  background: rgba(8, 11, 18, .86); backdrop-filter: blur(22px);
+}
+.brand-mark {
+  width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px;
+  background: linear-gradient(145deg, #6d9bff, #355bd7); color: white;
+  box-shadow: 0 8px 24px rgba(53,91,215,.35), inset 0 1px rgba(255,255,255,.25);
+}
+.nav-item { position: relative; color: #7f8a9d; }
+.nav-item:hover { color: #e5eaf3; background: rgba(255,255,255,.045); }
+.nav-item-active { color: #fff; background: rgba(91,140,255,.13); box-shadow: inset 0 0 0 1px rgba(91,140,255,.16); }
+.nav-item-active::before { content:""; position:absolute; left:-7px; top:10px; bottom:10px; width:3px; border-radius:9px; background:#6d9bff; box-shadow:0 0 12px #5b8cff; }
+.nav-icon { width: 18px; height: 18px; opacity: .88; }
+.app-main { position: relative; margin-left: 248px; min-height: 100vh; padding: 42px clamp(24px, 4vw, 64px) 64px; max-width: 1500px; }
+.page-kicker { color: #6d9bff; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.panel, .bg-gray-900 {
+  background: var(--surface) !important; border-color: var(--line) !important;
+  box-shadow: 0 18px 45px rgba(0,0,0,.16), inset 0 1px rgba(255,255,255,.025) !important;
+  backdrop-filter: blur(14px);
+}
+.rounded-xl { border-radius: 14px !important; }
+.ring-1 { --tw-ring-color: transparent !important; }
+.shadow-md { box-shadow: 0 16px 35px rgba(0,0,0,.14) !important; }
+.bg-gray-800 { background-color: rgba(30,41,59,.7) !important; }
+.border-gray-800, .divide-gray-800 > :not([hidden]) ~ :not([hidden]) { border-color: var(--line) !important; }
+.border-gray-700 { border-color: rgba(148,163,184,.18) !important; }
+input, select, textarea { transition: border-color .18s, box-shadow .18s, background .18s; }
+input:hover, select:hover, textarea:hover { border-color: rgba(148,163,184,.3) !important; }
+input:focus, select:focus, textarea:focus { border-color: #5b8cff !important; box-shadow: 0 0 0 3px rgba(91,140,255,.12); }
+table thead { background: rgba(255,255,255,.018); }
+table tbody tr { transition: background .18s; }
+table tbody tr:hover { background: rgba(91,140,255,.045) !important; }
+.log-box { line-height: 1.7; background: #060910 !important; }
+.btn-primary { box-shadow: 0 8px 20px rgba(37,99,235,.2); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(37,99,235,.3); }
+.stat-pill { border: 1px solid var(--line); background: rgba(255,255,255,.025); border-radius: 12px; padding: 9px 13px; }
+
+@media (max-width: 820px) {
+  .app-sidebar { inset: 0 0 auto; width: auto; height: 72px; padding: 12px 16px; flex-direction: row; align-items: center; }
+  .sidebar-copy, .sidebar-footer, .brand-subtitle { display: none !important; }
+  .sidebar-nav { margin: 0 0 0 auto !important; flex-direction: row !important; gap: 3px !important; }
+  .nav-item { padding: 10px !important; }
+  .nav-item span { display: none; }
+  .nav-item-active::before { left: 25%; right: 25%; top: auto; bottom: -5px; width: auto; height: 2px; }
+  .app-main { margin-left: 0; padding: 102px 16px 40px; }
+  table { min-width: 720px; }
+  .overflow-hidden:has(table) { overflow-x: auto !important; }
+}

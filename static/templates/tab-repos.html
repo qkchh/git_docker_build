@@ -1,7 +1,11 @@
 <div x-show="currentTab === 'repos'" x-cloak>
 
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xl font-semibold" x-text="t('heading_repos')"></h2>
+  <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
+    <div>
+      <div class="page-kicker mb-2" x-text="lang === 'zh' ? 'Source control' : 'Source control'"></div>
+      <h2 class="text-3xl font-bold tracking-tight" x-text="t('heading_repos')"></h2>
+      <p class="text-sm text-gray-500 mt-2" x-text="lang === 'zh' ? '管理代码源，选择提交并创建可复现的构建' : 'Manage sources, choose a commit and create reproducible builds'"></p>
+    </div>
     <button @click="showAddRepo = !showAddRepo"
       class="btn-primary"
       x-text="t('btn_add_repo')">
@@ -11,7 +15,7 @@
   <!-- Add Repo Form -->
   <div x-show="showAddRepo" x-cloak class="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-5 shadow-md ring-1 ring-white/5">
     <h3 class="font-medium mb-4 text-gray-300" x-text="t('form_new_repo')"></h3>
-    <div class="grid grid-cols-2 gap-4 mb-4">
+    <div class="grid sm:grid-cols-2 gap-4 mb-4">
       <div>
         <label class="block text-xs text-gray-400 mb-1" x-text="t('label_name')"></label>
         <input x-model="newRepo.name" type="text" :placeholder="t('placeholder_name')"
@@ -64,15 +68,15 @@
       </div>
     </template>
     <template x-for="repo in repos" :key="repo.id">
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between shadow-md hover:border-gray-700 ring-1 ring-white/5 transition-all">
-        <div class="flex items-center gap-3">
-          <span class="text-lg" x-text="repo.source_type === 'remote' ? '☁️' : '💻'"></span>
-          <div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md hover:border-gray-700 ring-1 ring-white/5 transition-all">
+        <div class="flex items-center gap-4 min-w-0">
+          <span class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-400/10 grid place-items-center shrink-0" x-text="repo.source_type === 'remote' ? '⌁' : '⌂'"></span>
+          <div class="min-w-0">
             <div class="font-medium" x-text="repo.name"></div>
-            <div class="text-xs text-gray-500" x-text="repo.git_url || repo.local_path"></div>
+            <div class="text-xs text-gray-500 truncate mt-1" x-text="repo.git_url || repo.local_path"></div>
           </div>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <button @click="openRepo(repo)"
             class="btn-secondary btn-sm"
             x-text="t('btn_browse_commits')">
@@ -117,12 +121,12 @@
         </div>
       </template>
       <template x-for="commit in commits" :key="commit.sha">
-        <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-800/50 transition-colors">
+        <div class="px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-800/50 transition-colors">
           <div class="flex items-center gap-3 min-w-0">
             <code class="text-xs bg-gray-800 px-2 py-0.5 rounded text-yellow-400 shrink-0" x-text="commit.short_sha"></code>
             <span class="text-sm truncate" x-text="commit.message"></span>
           </div>
-          <div class="flex items-center gap-4 shrink-0 ml-4">
+          <div class="flex items-center gap-4 shrink-0 sm:ml-4">
             <span class="text-xs text-gray-500" x-text="commit.author"></span>
             <span class="text-xs text-gray-600" x-text="formatDate(commit.date)"></span>
             <button @click="triggerBuild(selectedRepo, commit)"
@@ -176,7 +180,7 @@
     <p class="px-5 pt-3 text-xs text-gray-500" x-text="t('env_hint')"></p>
 
     <!-- Add form -->
-    <div class="px-5 py-3 flex gap-2 items-end">
+    <div class="px-5 py-3 flex flex-col sm:flex-row gap-2 sm:items-end">
       <div class="flex-1">
         <label class="block text-xs text-gray-400 mb-1" x-text="t('label_key')"></label>
         <input x-model="newEnvKey" type="text" :placeholder="t('placeholder_key')" @keydown.enter="addEnvVar()"
