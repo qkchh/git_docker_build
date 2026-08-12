@@ -73,14 +73,23 @@ cd git_docker_build
 启动时，终端会打印访问 Token：
 
 ```
-====================================================
-  Access Token: 4a7f2c9e1b3d5f8a0e6c2b4d7f1a3e5c
-====================================================
+==================================================
+  URL:    http://localhost:3002
+  Token:  4a7f2c9e1b3d5f8a0e6c2b4d7f1a3e5c
+  Token file: /path/to/git_docker_build/data/access_token.txt
+==================================================
 ```
 
 - 首次访问时在登录页输入该 Token，浏览器记住 **30 天**
-- Token 首次生成后保存在 `data/access_token.txt`，重启服务不会变化
-- 如需自定义 Token，设置环境变量 `ACCESS_TOKEN=your_token` 后重启
+- Token 会保存在 `data/access_token.txt`，重启服务不会变化
+- 如果忘记 Token，在项目目录执行：
+
+  ```bash
+  cat data/access_token.txt
+  ```
+
+- 如需自定义 Token，可设置环境变量 `ACCESS_TOKEN=your_token` 后重启；`run.sh` 会把本次实际使用的 Token 同步写入 `data/access_token.txt`
+- `data/` 已加入 `.gitignore`，Token 文件不会被提交到 Git
 
 ---
 
@@ -89,7 +98,7 @@ cd git_docker_build
 | 仓库类型 | 构建目录 | 行为 |
 |----------|----------|------|
 | 本地仓库 | `local_path` | 直接在本地目录构建，所有文件均可用 |
-| 远端仓库 | `workspace/<id>/` | clone 后 checkout 到指定 commit 再构建 |
+| 远端仓库 | `workspace/<项目名称>/` | clone 后 checkout 到指定 commit 再构建 |
 
 **构建方式自动检测：**
 - 目录含 `docker-compose.yml` → `docker compose build`

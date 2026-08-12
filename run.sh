@@ -7,6 +7,7 @@ cd "$SCRIPT_DIR"
 
 LOG_FILE="$SCRIPT_DIR/data/app.log"
 PID_FILE="$SCRIPT_DIR/data/app.pid"
+TOKEN_FILE="$SCRIPT_DIR/data/access_token.txt"
 
 mkdir -p "$SCRIPT_DIR/data"
 
@@ -80,10 +81,13 @@ fi
 
 # ── Print address & token ─────────────────────────────
 TOKEN=$(grep -m1 "Access Token" "$LOG_FILE" | sed 's/.*Access Token: //' | tr -d '[:space:]')
+printf '%s\n' "$TOKEN" > "$TOKEN_FILE"
+chmod 600 "$TOKEN_FILE" 2>/dev/null || true
 
 echo ""
 echo "=================================================="
 echo "  URL:    http://localhost:$PORT"
 echo "  Token:  $TOKEN"
+echo "  Token file: $TOKEN_FILE"
 echo "=================================================="
 echo ""
